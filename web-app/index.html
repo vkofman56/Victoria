@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Victoria's Coloring Book</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div id="app">
+        <!-- Page Gallery View -->
+        <div id="gallery-view" class="view active">
+            <header>
+                <h1>Victoria's Coloring Book</h1>
+            </header>
+            <div class="page-grid">
+                <!-- Pages will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Type 1 Page View -->
+        <div id="type1-view" class="view">
+            <div class="page-container">
+                <!-- Page Number at Top -->
+                <div class="page-number"></div>
+
+                <!-- 4 Picture Boxes in 2x2 Grid -->
+                <div class="picture-grid">
+                    <div class="picture-box box-1" data-position="top-left">
+                        <div class="picture-content">
+                            <img src="" alt="" class="picture-image">
+                            <div class="word-label"></div>
+                        </div>
+                    </div>
+                    <div class="picture-box box-2" data-position="top-right">
+                        <div class="picture-content">
+                            <img src="" alt="" class="picture-image">
+                            <div class="word-label"></div>
+                        </div>
+                    </div>
+                    <div class="picture-box box-3" data-position="bottom-left">
+                        <div class="picture-content">
+                            <img src="" alt="" class="picture-image">
+                            <div class="word-label"></div>
+                        </div>
+                    </div>
+                    <div class="picture-box box-4" data-position="bottom-right">
+                        <div class="picture-content">
+                            <img src="" alt="" class="picture-image">
+                            <div class="word-label"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Circle with 4 Colored Quadrants -->
+                <div class="center-circle">
+                    <svg viewBox="0 0 200 200" class="circle-svg">
+                        <!-- Define the 4 quadrants -->
+                        <path id="quadrant-1" class="quadrant top-left"
+                              d="M 100 100 L 100 0 A 100 100 0 0 1 200 100 Z"
+                              fill="#FF6B6B" data-box="1" />
+                        <path id="quadrant-2" class="quadrant top-right"
+                              d="M 100 100 L 200 100 A 100 100 0 0 1 100 200 Z"
+                              fill="#4ECDC4" data-box="2" />
+                        <path id="quadrant-3" class="quadrant bottom-left"
+                              d="M 100 100 L 100 200 A 100 100 0 0 1 0 100 Z"
+                              fill="#FFE66D" data-box="3" />
+                        <path id="quadrant-4" class="quadrant bottom-right"
+                              d="M 100 100 L 0 100 A 100 100 0 0 1 100 0 Z"
+                              fill="#95E1D3" data-box="4" />
+
+                        <!-- Center white circle for visual effect -->
+                        <circle cx="100" cy="100" r="30" fill="white" stroke="#333" stroke-width="2"/>
+                    </svg>
+                </div>
+
+                <!-- Back Button -->
+                <button class="back-button" onclick="goBackToGallery()">← Back</button>
+            </div>
+        </div>
+
+        <!-- Fullscreen Coloring View -->
+        <div id="coloring-view" class="view">
+            <div class="coloring-container">
+                <!-- Coloring Canvas -->
+                <div class="canvas-wrapper">
+                    <canvas id="coloring-canvas"></canvas>
+                    <canvas id="drawing-canvas"></canvas>
+                </div>
+
+                <!-- Color Palette -->
+                <div class="color-palette">
+                    <div class="color-swatch" data-color="#FF0000" style="background-color: #FF0000;"></div>
+                    <div class="color-swatch" data-color="#FF8C00" style="background-color: #FF8C00;"></div>
+                    <div class="color-swatch" data-color="#FFD700" style="background-color: #FFD700;"></div>
+                    <div class="color-swatch" data-color="#00FF00" style="background-color: #00FF00;"></div>
+                    <div class="color-swatch" data-color="#0000FF" style="background-color: #0000FF;"></div>
+                    <div class="color-swatch" data-color="#9370DB" style="background-color: #9370DB;"></div>
+                    <div class="color-swatch" data-color="#FF69B4" style="background-color: #FF69B4;"></div>
+                    <div class="color-swatch" data-color="#8B4513" style="background-color: #8B4513;"></div>
+                    <div class="color-swatch" data-color="#000000" style="background-color: #000000;"></div>
+                    <div class="color-swatch" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 2px solid #ccc;"></div>
+                </div>
+
+                <!-- Tools -->
+                <div class="tools">
+                    <button class="tool-button" id="brush-tool">🖌️ Brush</button>
+                    <button class="tool-button" id="fill-tool">🪣 Fill</button>
+                    <button class="tool-button" id="eraser-tool">🧹 Eraser</button>
+                    <button class="tool-button" id="undo-tool">↶ Undo</button>
+                </div>
+
+                <!-- Back Button -->
+                <button class="back-button" onclick="exitColoring()">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/type1-page.js"></script>
+    <script src="js/coloring-engine.js"></script>
+</body>
+</html>

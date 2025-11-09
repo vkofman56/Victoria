@@ -1,0 +1,501 @@
+/**
+ * coloring-engine.js
+ * Handles the coloring functionality with touch-based drawing
+ */
+
+const ColoringEngine = {
+    canvas: null,
+    drawingCanvas: null,
+    ctx: null,
+    drawingCtx: null,
+    currentColor: '#FF0000',
+    currentTool: 'brush',
+    isDrawing: false,
+    lastX: 0,
+    lastY: 0,
+    undoStack: [],
+    currentPicture: null,
+    baseImage: null
+};
+
+/**
+ * Initialize the coloring engine for a specific picture
+ */
+function initializeColoringEngine(picture, page) {
+    console.log('Initializing coloring engine for:', picture.word);
+
+    ColoringEngine.currentPicture = picture;
+
+    // Get canvas elements
+    ColoringEngine.canvas = document.getElementById('coloring-canvas');
+    ColoringEngine.drawingCanvas = document.getElementById('drawing-canvas');
+
+    if (!ColoringEngine.canvas || !ColoringEngine.drawingCanvas) {
+        console.error('Canvas elements not found');
+        return;
+    }
+
+    // Get contexts
+    ColoringEngine.ctx = ColoringEngine.canvas.getContext('2d');
+    ColoringEngine.drawingCtx = ColoringEngine.drawingCanvas.getContext('2d');
+
+    // Setup canvas size
+    setupCanvasSize();
+
+    // Load the coloring image
+    loadColoringImage(picture);
+
+    // Setup event listeners
+    setupColoringEventListeners();
+
+    // Initialize color palette
+    initializeColorPalette();
+
+    // Initialize tools
+    initializeTools();
+
+    // Clear undo stack
+    ColoringEngine.undoStack = [];
+}
+
+/**
+ * Setup canvas size to match container
+ */
+function setupCanvasSize() {
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const rect = wrapper.getBoundingClientRect();
+
+    const width = rect.width;
+    const height = rect.height;
+
+    // Set both canvases to same size
+    [ColoringEngine.canvas, ColoringEngine.drawingCanvas].forEach(canvas => {
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+    });
+
+    console.log('Canvas size:', width, 'x', height);
+}
+
+/**
+ * Load the coloring image onto the base canvas
+ */
+function loadColoringImage(picture) {
+    // For now, generate a simple coloring outline
+    // In production, you'd load the actual SVG/image
+    const img = new Image();
+
+    // Generate a placeholder coloring page
+    const word = picture.word.toLowerCase();
+    img.src = generateColoringSVG(word);
+
+    img.onload = () => {
+        // Clear canvas
+        ColoringEngine.ctx.clearRect(0, 0, ColoringEngine.canvas.width, ColoringEngine.canvas.height);
+
+        // Fill background white
+        ColoringEngine.ctx.fillStyle = 'white';
+        ColoringEngine.ctx.fillRect(0, 0, ColoringEngine.canvas.width, ColoringEngine.canvas.height);
+
+        // Draw the coloring outline centered
+        const scale = Math.min(
+            ColoringEngine.canvas.width / img.width,
+            ColoringEngine.canvas.height / img.height
+        ) * 0.8;
+
+        const x = (ColoringEngine.canvas.width - img.width * scale) / 2;
+        const y = (ColoringEngine.canvas.height - img.height * scale) / 2;
+
+        ColoringEngine.ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+        // Store base image for reference
+        ColoringEngine.baseImage = ColoringEngine.ctx.getImageData(
+            0, 0, ColoringEngine.canvas.width, ColoringEngine.canvas.height
+        );
+
+        console.log('Coloring image loaded');
+    };
+
+    img.onerror = () => {
+        console.error('Failed to load coloring image');
+        // Draw fallback
+        drawFallbackImage();
+    };
+}
+
+/**
+ * Draw a simple fallback image if loading fails
+ */
+function drawFallbackImage() {
+    ColoringEngine.ctx.fillStyle = 'white';
+    ColoringEngine.ctx.fillRect(0, 0, ColoringEngine.canvas.width, ColoringEngine.canvas.height);
+
+    ColoringEngine.ctx.strokeStyle = 'black';
+    ColoringEngine.ctx.lineWidth = 3;
+    ColoringEngine.ctx.strokeRect(
+        100, 100,
+        ColoringEngine.canvas.width - 200,
+        ColoringEngine.canvas.height - 200
+    );
+
+    ColoringEngine.ctx.font = '24px Arial';
+    ColoringEngine.ctx.fillStyle = 'black';
+    ColoringEngine.ctx.textAlign = 'center';
+    ColoringEngine.ctx.fillText(
+        ColoringEngine.currentPicture.word,
+        ColoringEngine.canvas.width / 2,
+        ColoringEngine.canvas.height / 2
+    );
+}
+
+/**
+ * Setup event listeners for drawing
+ */
+function setupColoringEventListeners() {
+    const canvas = ColoringEngine.drawingCanvas;
+
+    // Mouse events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+}
+
+/**
+ * Get coordinates from mouse event
+ */
+function getMousePos(e) {
+    const rect = ColoringEngine.drawingCanvas.getBoundingClientRect();
+    return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+}
+
+/**
+ * Get coordinates from touch event
+ */
+function getTouchPos(e) {
+    const rect = ColoringEngine.drawingCanvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+    };
+}
+
+/**
+ * Start drawing
+ */
+function startDrawing(e) {
+    ColoringEngine.isDrawing = true;
+    const pos = getMousePos(e);
+    ColoringEngine.lastX = pos.x;
+    ColoringEngine.lastY = pos.y;
+
+    // Save state for undo
+    saveState();
+}
+
+/**
+ * Draw on canvas
+ */
+function draw(e) {
+    if (!ColoringEngine.isDrawing) return;
+
+    const pos = getMousePos(e);
+
+    if (ColoringEngine.currentTool === 'brush') {
+        drawBrush(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
+    } else if (ColoringEngine.currentTool === 'eraser') {
+        drawEraser(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
+    }
+
+    ColoringEngine.lastX = pos.x;
+    ColoringEngine.lastY = pos.y;
+}
+
+/**
+ * Stop drawing
+ */
+function stopDrawing() {
+    ColoringEngine.isDrawing = false;
+}
+
+/**
+ * Handle touch start
+ */
+function handleTouchStart(e) {
+    e.preventDefault();
+    ColoringEngine.isDrawing = true;
+    const pos = getTouchPos(e);
+    ColoringEngine.lastX = pos.x;
+    ColoringEngine.lastY = pos.y;
+
+    // Save state for undo
+    saveState();
+
+    // If using fill tool, fill immediately
+    if (ColoringEngine.currentTool === 'fill') {
+        floodFill(Math.floor(pos.x), Math.floor(pos.y));
+        ColoringEngine.isDrawing = false;
+    }
+}
+
+/**
+ * Handle touch move
+ */
+function handleTouchMove(e) {
+    e.preventDefault();
+    if (!ColoringEngine.isDrawing) return;
+
+    const pos = getTouchPos(e);
+
+    if (ColoringEngine.currentTool === 'brush') {
+        drawBrush(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
+    } else if (ColoringEngine.currentTool === 'eraser') {
+        drawEraser(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
+    }
+
+    ColoringEngine.lastX = pos.x;
+    ColoringEngine.lastY = pos.y;
+}
+
+/**
+ * Handle touch end
+ */
+function handleTouchEnd(e) {
+    e.preventDefault();
+    ColoringEngine.isDrawing = false;
+}
+
+/**
+ * Draw with brush
+ */
+function drawBrush(x1, y1, x2, y2) {
+    const ctx = ColoringEngine.drawingCtx;
+
+    ctx.strokeStyle = ColoringEngine.currentColor;
+    ctx.lineWidth = 15;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+}
+
+/**
+ * Erase
+ */
+function drawEraser(x1, y1, x2, y2) {
+    const ctx = ColoringEngine.drawingCtx;
+
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineWidth = 25;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.globalCompositeOperation = 'source-over';
+}
+
+/**
+ * Flood fill algorithm (simplified version)
+ */
+function floodFill(startX, startY) {
+    const ctx = ColoringEngine.drawingCtx;
+    const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const pixels = imageData.data;
+
+    const targetColor = getPixelColor(pixels, startX, startY, ctx.canvas.width);
+    const fillColor = hexToRgb(ColoringEngine.currentColor);
+
+    // Don't fill if same color
+    if (colorsMatch(targetColor, fillColor)) return;
+
+    const stack = [[startX, startY]];
+    const visited = new Set();
+
+    while (stack.length > 0) {
+        const [x, y] = stack.pop();
+        const key = `${x},${y}`;
+
+        if (visited.has(key)) continue;
+        if (x < 0 || x >= ctx.canvas.width || y < 0 || y >= ctx.canvas.height) continue;
+
+        visited.add(key);
+
+        const currentColor = getPixelColor(pixels, x, y, ctx.canvas.width);
+
+        if (colorsMatch(currentColor, targetColor)) {
+            setPixelColor(pixels, x, y, ctx.canvas.width, fillColor);
+
+            stack.push([x + 1, y]);
+            stack.push([x - 1, y]);
+            stack.push([x, y + 1]);
+            stack.push([x, y - 1]);
+        }
+
+        // Limit iterations to prevent freeze
+        if (visited.size > 50000) break;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
+/**
+ * Get pixel color at position
+ */
+function getPixelColor(pixels, x, y, width) {
+    const index = (y * width + x) * 4;
+    return {
+        r: pixels[index],
+        g: pixels[index + 1],
+        b: pixels[index + 2],
+        a: pixels[index + 3]
+    };
+}
+
+/**
+ * Set pixel color at position
+ */
+function setPixelColor(pixels, x, y, width, color) {
+    const index = (y * width + x) * 4;
+    pixels[index] = color.r;
+    pixels[index + 1] = color.g;
+    pixels[index + 2] = color.b;
+    pixels[index + 3] = 255;
+}
+
+/**
+ * Check if two colors match
+ */
+function colorsMatch(c1, c2, tolerance = 10) {
+    return Math.abs(c1.r - c2.r) < tolerance &&
+           Math.abs(c1.g - c2.g) < tolerance &&
+           Math.abs(c1.b - c2.b) < tolerance;
+}
+
+/**
+ * Convert hex color to RGB
+ */
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+}
+
+/**
+ * Initialize color palette
+ */
+function initializeColorPalette() {
+    const swatches = document.querySelectorAll('.color-swatch');
+
+    swatches.forEach(swatch => {
+        swatch.addEventListener('click', () => {
+            const color = swatch.dataset.color;
+            ColoringEngine.currentColor = color;
+
+            // Update selected state
+            swatches.forEach(s => s.classList.remove('selected'));
+            swatch.classList.add('selected');
+
+            // Switch to brush tool when selecting color
+            if (ColoringEngine.currentTool === 'eraser') {
+                selectTool('brush');
+            }
+        });
+    });
+
+    // Select first color by default
+    if (swatches[0]) {
+        swatches[0].click();
+    }
+}
+
+/**
+ * Initialize tools
+ */
+function initializeTools() {
+    document.getElementById('brush-tool')?.addEventListener('click', () => selectTool('brush'));
+    document.getElementById('fill-tool')?.addEventListener('click', () => selectTool('fill'));
+    document.getElementById('eraser-tool')?.addEventListener('click', () => selectTool('eraser'));
+    document.getElementById('undo-tool')?.addEventListener('click', () => undo());
+
+    // Select brush by default
+    selectTool('brush');
+}
+
+/**
+ * Select a tool
+ */
+function selectTool(tool) {
+    ColoringEngine.currentTool = tool;
+
+    // Update button states
+    document.querySelectorAll('.tool-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const buttons = {
+        brush: document.getElementById('brush-tool'),
+        fill: document.getElementById('fill-tool'),
+        eraser: document.getElementById('eraser-tool')
+    };
+
+    if (buttons[tool]) {
+        buttons[tool].classList.add('active');
+    }
+
+    console.log('Selected tool:', tool);
+}
+
+/**
+ * Save current state for undo
+ */
+function saveState() {
+    const imageData = ColoringEngine.drawingCtx.getImageData(
+        0, 0,
+        ColoringEngine.drawingCanvas.width,
+        ColoringEngine.drawingCanvas.height
+    );
+
+    ColoringEngine.undoStack.push(imageData);
+
+    // Limit stack size
+    if (ColoringEngine.undoStack.length > 20) {
+        ColoringEngine.undoStack.shift();
+    }
+}
+
+/**
+ * Undo last action
+ */
+function undo() {
+    if (ColoringEngine.undoStack.length > 0) {
+        const previousState = ColoringEngine.undoStack.pop();
+        ColoringEngine.drawingCtx.putImageData(previousState, 0, 0);
+        console.log('Undo performed');
+    } else {
+        console.log('Nothing to undo');
+    }
+}
+
+// Export for use in other modules
+window.ColoringEngine = ColoringEngine;
