@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Victoria Coloring - SIMPLE TEST</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .instructions {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 600px;
+            margin-bottom: 30px;
+        }
+
+        .instructions h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .demo-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .page-number {
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            height: 400px;
+            position: relative;
+        }
+
+        .box {
+            background: #f0f0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            border: 3px solid #ddd;
+        }
+
+        .circle-container {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+        }
+
+        .circle-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .quadrant {
+            cursor: pointer;
+            transition: opacity 0.3s;
+            opacity: 0.85;
+        }
+
+        .quadrant:hover {
+            opacity: 1;
+        }
+
+        .quadrant.blinking {
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 0.3; }
+        }
+
+        .message {
+            background: #4ECDC4;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Victoria Coloring Book - DEMO</h1>
+
+    <div class="instructions">
+        <h2>How to Use:</h2>
+        <ol>
+            <li><strong>See the 4 boxes below?</strong> Each has a word (CAT, DOG, BIRD, FISH)</li>
+            <li><strong>See the colored circle in the center?</strong> It has 4 colored parts</li>
+            <li><strong>Watch one part blink!</strong> That part is asking you to click it</li>
+            <li><strong>Click the BLINKING part</strong> of the circle</li>
+            <li><strong>You'll get a message</strong> showing which picture you selected!</li>
+        </ol>
+        <p style="margin-top: 20px; color: #666;">
+            <strong>NOTE:</strong> In the full app, clicking opens a fullscreen coloring page.
+            This is just a demo showing the selection mechanism!
+        </p>
+    </div>
+
+    <div class="demo-container">
+        <div class="page-number">1</div>
+
+        <div class="grid">
+            <!-- 4 Boxes -->
+            <div class="box" style="background-color: #FFE5E5;">🐱 CAT</div>
+            <div class="box" style="background-color: #E5F3FF;">🐶 DOG</div>
+            <div class="box" style="background-color: #FFF5E5;">🐦 BIRD</div>
+            <div class="box" style="background-color: #E5FFE5;">🐟 FISH</div>
+
+            <!-- Center Circle -->
+            <div class="circle-container">
+                <svg viewBox="0 0 200 200" class="circle-svg">
+                    <!-- 4 Quadrants -->
+                    <path class="quadrant blinking" data-word="CAT"
+                          d="M 100 100 L 100 0 A 100 100 0 0 1 200 100 Z"
+                          fill="#FF6B6B" />
+                    <path class="quadrant" data-word="DOG"
+                          d="M 100 100 L 200 100 A 100 100 0 0 1 100 200 Z"
+                          fill="#4ECDC4" />
+                    <path class="quadrant" data-word="BIRD"
+                          d="M 100 100 L 100 200 A 100 100 0 0 1 0 100 Z"
+                          fill="#FFE66D" />
+                    <path class="quadrant" data-word="FISH"
+                          d="M 100 100 L 0 100 A 100 100 0 0 1 100 0 Z"
+                          fill="#95E1D3" />
+
+                    <!-- Center white circle -->
+                    <circle cx="100" cy="100" r="30" fill="white" stroke="#333" stroke-width="2"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <script>
+        // Add click handlers to quadrants
+        document.querySelectorAll('.quadrant').forEach(quadrant => {
+            quadrant.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const word = this.getAttribute('data-word');
+
+                // Show message
+                const message = document.getElementById('message');
+                message.textContent = `🎉 Great! You selected: ${word}! In the full app, this would open the ${word} coloring page!`;
+                message.classList.add('show');
+
+                // Hide message after 3 seconds
+                setTimeout(() => {
+                    message.classList.remove('show');
+                }, 3000);
+
+                // Stop blinking on clicked quadrant
+                this.classList.remove('blinking');
+
+                // Make another one blink
+                setTimeout(() => {
+                    const quadrants = document.querySelectorAll('.quadrant');
+                    const randomIndex = Math.floor(Math.random() * 4);
+                    quadrants[randomIndex].classList.add('blinking');
+                }, 500);
+            });
+        });
+
+        console.log('✅ Victoria Coloring Demo Loaded!');
+        console.log('👉 Click the BLINKING colored part of the circle!');
+    </script>
+</body>
+</html>
