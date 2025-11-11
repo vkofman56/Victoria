@@ -431,16 +431,22 @@
         function isInsideDrawingArea(x, y) {
             if (!app.ctx) return true; // If no context, allow drawing
 
-            const imageData = app.ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-            const [r, g, b, a] = imageData.data;
+            try {
+                const imageData = app.ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
+                const [r, g, b, a] = imageData.data;
 
-            // Check if pixel is black (part of the outline) or already colored
-            // White background means out of bounds
-            const isWhiteBackground = r > 240 && g > 240 && b > 240;
-            const isBlackLine = r < 50 && g < 50 && b < 50;
+                // Check if pixel is black (part of the outline) or already colored
+                // White background means out of bounds
+                const isWhiteBackground = r > 240 && g > 240 && b > 240;
+                const isBlackLine = r < 50 && g < 50 && b < 50;
 
-            // Inside the drawing area if it's a black line or near one
-            return isBlackLine || !isWhiteBackground;
+                // Inside the drawing area if it's a black line or near one
+                return isBlackLine || !isWhiteBackground;
+            } catch (e) {
+                // If we can't read pixel data (CORS/tainted canvas), allow drawing everywhere
+                console.log('Cannot read canvas pixels (CORS), allowing all drawing');
+                return true;
+            }
         }
 
         // YOUR BOOK DATA with actual image paths
@@ -594,6 +600,7 @@
             const picture = app.currentPage.pictures[app.currentPictureIndex];
             console.log('Loading image:', picture.image);
             const img = new Image();
+            img.crossOrigin = 'anonymous'; // Allow cross-origin access
             img.onload = () => {
                 console.log('Image loaded:', img.width, 'x', img.height);
                 const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
@@ -636,12 +643,10 @@
 
         // DRAWING
         function startDraw(e) {
-            console.log('startDraw called');
             app.isDrawing = true;
             const pos = getPos(e);
             app.lastX = pos.x;
             app.lastY = pos.y;
-            console.log('Starting draw at:', pos.x, pos.y);
             saveState();
         }
 
@@ -658,7 +663,6 @@
                     playOutOfBoundsSound();
                 }
 
-                console.log('Drawing with brush, color:', app.selectedColor);
                 app.drawingCtx.strokeStyle = app.selectedColor;
                 app.drawingCtx.lineWidth = 15;
                 app.drawingCtx.lineCap = 'round';
@@ -668,7 +672,6 @@
                 app.drawingCtx.lineTo(pos.x, pos.y);
                 app.drawingCtx.stroke();
             } else if (app.currentTool === 'eraser') {
-                console.log('Erasing');
                 app.drawingCtx.globalCompositeOperation = 'destination-out';
                 app.drawingCtx.lineWidth = 25;
                 app.drawingCtx.lineCap = 'round';
@@ -722,16 +725,12 @@
         }
 
         function selectColor(color) {
-            console.log('selectColor called with:', color);
             app.selectedColor = color;
             document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
             // Find and select the swatch with this color
             const swatch = document.querySelector(`.color-swatch[style*="${color}"]`);
             if (swatch) {
                 swatch.classList.add('selected');
-                console.log('Color swatch selected');
-            } else {
-                console.warn('Could not find swatch for color:', color);
             }
             if (app.currentTool === 'eraser') {
                 app.currentTool = 'brush';
@@ -740,7 +739,6 @@
         }
 
         function selectTool(tool) {
-            console.log('selectTool called with:', tool);
             app.currentTool = tool;
             updateToolButtons();
         }
