@@ -497,6 +497,10 @@
             renderGallery();
             setupColorPalette();
             showGallery();
+            // Initialize first color
+            if (colors.length > 0) {
+                app.selectedColor = colors[0];
+            }
         };
 
         // RENDER GALLERY
@@ -549,8 +553,8 @@
             }, 100);
 
             // Add click handlers
-            document.querySelectorAll('.quadrant').forEach((q, i) => {
-                q.onclick = () => openColoring(i);
+            document.querySelectorAll('.quadrant').forEach((q) => {
+                q.onclick = () => openColoring(parseInt(q.dataset.index));
             });
 
             showType1Page();
@@ -695,16 +699,30 @@
         function selectColor(color) {
             app.selectedColor = color;
             document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-            event.target.classList.add('selected');
+            // Find and select the swatch with this color
+            const swatch = document.querySelector(`.color-swatch[style*="${color}"]`);
+            if (swatch) swatch.classList.add('selected');
             if (app.currentTool === 'eraser') {
-                selectTool('brush');
+                app.currentTool = 'brush';
+                updateToolButtons();
             }
         }
 
         function selectTool(tool) {
             app.currentTool = tool;
+            updateToolButtons();
+        }
+
+        function updateToolButtons() {
             document.querySelectorAll('.tool-button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            const toolButtons = {
+                'brush': 0,
+                'eraser': 1
+            };
+            const buttons = document.querySelectorAll('.tool-button');
+            if (toolButtons[app.currentTool] !== undefined) {
+                buttons[toolButtons[app.currentTool]].classList.add('active');
+            }
         }
 
         // UNDO
