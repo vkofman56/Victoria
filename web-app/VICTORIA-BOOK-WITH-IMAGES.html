@@ -330,16 +330,20 @@
 
                     <div class="center-circle">
                         <svg viewBox="0 0 200 200" class="circle-svg">
-                            <path class="quadrant" data-index="0"
+                            <!-- Top-Right Quadrant -> Picture 2 (img2, top-right) -->
+                            <path class="quadrant" data-index="1"
                                   d="M 100 100 L 100 0 A 100 100 0 0 1 200 100 Z"
                                   fill="#FF6B6B" />
-                            <path class="quadrant" data-index="1"
+                            <!-- Bottom-Right Quadrant -> Picture 4 (img4, bottom-right) -->
+                            <path class="quadrant" data-index="3"
                                   d="M 100 100 L 200 100 A 100 100 0 0 1 100 200 Z"
                                   fill="#4ECDC4" />
+                            <!-- Bottom-Left Quadrant -> Picture 3 (img3, bottom-left) -->
                             <path class="quadrant" data-index="2"
                                   d="M 100 100 L 100 200 A 100 100 0 0 1 0 100 Z"
                                   fill="#FFE66D" />
-                            <path class="quadrant" data-index="3"
+                            <!-- Top-Left Quadrant -> Picture 1 (img1, top-left) -->
+                            <path class="quadrant" data-index="0"
                                   d="M 100 100 L 0 100 A 100 100 0 0 1 100 0 Z"
                                   fill="#95E1D3" />
                             <circle cx="100" cy="100" r="30" fill="white" stroke="#333" stroke-width="2"/>
@@ -383,8 +387,60 @@
             ctx: null,
             drawingCtx: null,
             lastX: 0,
-            lastY: 0
+            lastY: 0,
+            audioContext: null,
+            lastOutOfBoundsSound: 0
         };
+
+        // Initialize audio context
+        function initAudio() {
+            if (!app.audioContext) {
+                app.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Play "out of bounds" sound
+        function playOutOfBoundsSound() {
+            // Throttle sound to avoid too many beeps (max once per 200ms)
+            const now = Date.now();
+            if (now - app.lastOutOfBoundsSound < 200) return;
+            app.lastOutOfBoundsSound = now;
+
+            if (!app.audioContext) initAudio();
+
+            const oscillator = app.audioContext.createOscillator();
+            const gainNode = app.audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(app.audioContext.destination);
+
+            // Create a "buzzer" sound
+            oscillator.frequency.value = 200;
+            oscillator.type = 'square';
+
+            // Quick fade out
+            gainNode.gain.setValueAtTime(0.3, app.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, app.audioContext.currentTime + 0.1);
+
+            oscillator.start(app.audioContext.currentTime);
+            oscillator.stop(app.audioContext.currentTime + 0.1);
+        }
+
+        // Check if a pixel is part of the drawing area (black lines)
+        function isInsideDrawingArea(x, y) {
+            if (!app.ctx) return true; // If no context, allow drawing
+
+            const imageData = app.ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
+            const [r, g, b, a] = imageData.data;
+
+            // Check if pixel is black (part of the outline) or already colored
+            // White background means out of bounds
+            const isWhiteBackground = r > 240 && g > 240 && b > 240;
+            const isBlackLine = r < 50 && g < 50 && b < 50;
+
+            // Inside the drawing area if it's a black line or near one
+            return isBlackLine || !isWhiteBackground;
+        }
 
         // YOUR BOOK DATA with actual image paths
         const pages = [
@@ -566,7 +622,15 @@
             if (!app.isDrawing) return;
             const pos = getPos(e);
 
+            // Check if drawing inside valid area
+            const insideBounds = isInsideDrawingArea(pos.x, pos.y);
+
             if (app.currentTool === 'brush') {
+                if (!insideBounds) {
+                    // Play sound when coloring outside the lines
+                    playOutOfBoundsSound();
+                }
+
                 app.drawingCtx.strokeStyle = app.selectedColor;
                 app.drawingCtx.lineWidth = 15;
                 app.drawingCtx.lineCap = 'round';
