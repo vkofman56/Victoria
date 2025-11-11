@@ -364,8 +364,8 @@
                 </div>
                 <div class="color-palette" id="palette"></div>
                 <div class="tools">
-                    <button class="tool-button active" onclick="selectTool('brush')">🖌️ Brush</button>
-                    <button class="tool-button" onclick="selectTool('eraser')">🧹 Eraser</button>
+                    <button class="tool-button active" data-tool="brush" onclick="selectTool('brush')">🖌️ Brush</button>
+                    <button class="tool-button" data-tool="eraser" onclick="selectTool('eraser')">🧹 Eraser</button>
                     <button class="tool-button" onclick="undo()">↶ Undo</button>
                     <button class="tool-button" onclick="clearCanvas()">🗑️ Clear</button>
                 </div>
@@ -389,7 +389,8 @@
             lastX: 0,
             lastY: 0,
             audioContext: null,
-            lastOutOfBoundsSound: 0
+            lastOutOfBoundsSound: 0,
+            canvasListenersAdded: false
         };
 
         // Initialize audio context
@@ -574,6 +575,7 @@
 
         // SETUP CANVAS
         function setupCanvas() {
+            console.log('Setting up canvas...');
             const canvas = document.getElementById('coloring-canvas');
             const drawingCanvas = document.getElementById('drawing-canvas');
             const wrapper = document.querySelector('.canvas-wrapper');
@@ -583,13 +585,17 @@
             drawingCanvas.width = canvas.width;
             drawingCanvas.height = canvas.height;
 
+            console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+
             app.ctx = canvas.getContext('2d');
             app.drawingCtx = drawingCanvas.getContext('2d');
 
             // Load and draw the coloring image
             const picture = app.currentPage.pictures[app.currentPictureIndex];
+            console.log('Loading image:', picture.image);
             const img = new Image();
             img.onload = () => {
+                console.log('Image loaded:', img.width, 'x', img.height);
                 const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
                 const x = (canvas.width - img.width * scale) / 2;
                 const y = (canvas.height - img.height * scale) / 2;
@@ -597,6 +603,10 @@
                 app.ctx.fillStyle = 'white';
                 app.ctx.fillRect(0, 0, canvas.width, canvas.height);
                 app.ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                console.log('Image drawn to canvas');
+            };
+            img.onerror = () => {
+                console.error('Failed to load image:', picture.image);
             };
             img.src = picture.image;
 
@@ -604,21 +614,34 @@
             app.drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
             app.undoStack = [];
 
-            // Touch events
-            drawingCanvas.addEventListener('mousedown', startDraw);
-            drawingCanvas.addEventListener('mousemove', draw);
-            drawingCanvas.addEventListener('mouseup', stopDraw);
-            drawingCanvas.addEventListener('touchstart', handleTouch);
-            drawingCanvas.addEventListener('touchmove', handleTouch);
-            drawingCanvas.addEventListener('touchend', stopDraw);
+            // Add event listeners only once
+            if (!app.canvasListenersAdded) {
+                console.log('Adding canvas event listeners...');
+                drawingCanvas.addEventListener('mousedown', startDraw);
+                drawingCanvas.addEventListener('mousemove', draw);
+                drawingCanvas.addEventListener('mouseup', stopDraw);
+                drawingCanvas.addEventListener('mouseout', stopDraw);
+                drawingCanvas.addEventListener('touchstart', handleTouch, { passive: false });
+                drawingCanvas.addEventListener('touchmove', handleTouch, { passive: false });
+                drawingCanvas.addEventListener('touchend', stopDraw);
+                app.canvasListenersAdded = true;
+                console.log('Event listeners added');
+            }
+
+            // Initialize tool state
+            app.currentTool = 'brush';
+            updateToolButtons();
+            console.log('Canvas setup complete, tool:', app.currentTool, 'color:', app.selectedColor);
         }
 
         // DRAWING
         function startDraw(e) {
+            console.log('startDraw called');
             app.isDrawing = true;
             const pos = getPos(e);
             app.lastX = pos.x;
             app.lastY = pos.y;
+            console.log('Starting draw at:', pos.x, pos.y);
             saveState();
         }
 
@@ -635,6 +658,7 @@
                     playOutOfBoundsSound();
                 }
 
+                console.log('Drawing with brush, color:', app.selectedColor);
                 app.drawingCtx.strokeStyle = app.selectedColor;
                 app.drawingCtx.lineWidth = 15;
                 app.drawingCtx.lineCap = 'round';
@@ -644,6 +668,7 @@
                 app.drawingCtx.lineTo(pos.x, pos.y);
                 app.drawingCtx.stroke();
             } else if (app.currentTool === 'eraser') {
+                console.log('Erasing');
                 app.drawingCtx.globalCompositeOperation = 'destination-out';
                 app.drawingCtx.lineWidth = 25;
                 app.drawingCtx.lineCap = 'round';
@@ -697,11 +722,17 @@
         }
 
         function selectColor(color) {
+            console.log('selectColor called with:', color);
             app.selectedColor = color;
             document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
             // Find and select the swatch with this color
             const swatch = document.querySelector(`.color-swatch[style*="${color}"]`);
-            if (swatch) swatch.classList.add('selected');
+            if (swatch) {
+                swatch.classList.add('selected');
+                console.log('Color swatch selected');
+            } else {
+                console.warn('Could not find swatch for color:', color);
+            }
             if (app.currentTool === 'eraser') {
                 app.currentTool = 'brush';
                 updateToolButtons();
@@ -709,19 +740,18 @@
         }
 
         function selectTool(tool) {
+            console.log('selectTool called with:', tool);
             app.currentTool = tool;
             updateToolButtons();
         }
 
         function updateToolButtons() {
-            document.querySelectorAll('.tool-button').forEach(b => b.classList.remove('active'));
-            const toolButtons = {
-                'brush': 0,
-                'eraser': 1
-            };
-            const buttons = document.querySelectorAll('.tool-button');
-            if (toolButtons[app.currentTool] !== undefined) {
-                buttons[toolButtons[app.currentTool]].classList.add('active');
+            // Remove active class from all tool buttons
+            document.querySelectorAll('.tool-button[data-tool]').forEach(b => b.classList.remove('active'));
+            // Add active class to current tool
+            const activeButton = document.querySelector(`.tool-button[data-tool="${app.currentTool}"]`);
+            if (activeButton) {
+                activeButton.classList.add('active');
             }
         }
 
