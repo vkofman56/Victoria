@@ -375,6 +375,9 @@
     </div>
 
     <script>
+        // VERSION: 2024-FIX-CORS-V2
+        console.log('🎨 Coloring Book Version: 2024-FIX-CORS-V2');
+
         // APP STATE
         const app = {
             currentView: 'gallery',
@@ -429,24 +432,9 @@
 
         // Check if a pixel is part of the drawing area (black lines)
         function isInsideDrawingArea(x, y) {
-            if (!app.ctx) return true; // If no context, allow drawing
-
-            try {
-                const imageData = app.ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-                const [r, g, b, a] = imageData.data;
-
-                // Check if pixel is black (part of the outline) or already colored
-                // White background means out of bounds
-                const isWhiteBackground = r > 240 && g > 240 && b > 240;
-                const isBlackLine = r < 50 && g < 50 && b < 50;
-
-                // Inside the drawing area if it's a black line or near one
-                return isBlackLine || !isWhiteBackground;
-            } catch (e) {
-                // If we can't read pixel data (CORS/tainted canvas), allow drawing everywhere
-                console.log('Cannot read canvas pixels (CORS), allowing all drawing');
-                return true;
-            }
+            // CORS prevents reading canvas pixels from local images
+            // Always allow drawing to avoid SecurityError
+            return true;
         }
 
         // YOUR BOOK DATA with actual image paths
