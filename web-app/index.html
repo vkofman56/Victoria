@@ -681,11 +681,26 @@
             if (!app.isDrawing) return;
             const pos = getPos(e);
 
-            // Check if drawing inside valid area
-            const insideBounds = isInsideDrawingArea(pos.x, pos.y);
-
             if (app.currentTool === 'brush') {
-                if (!insideBounds) {
+                // Check multiple points along the line for boundary detection
+                // This provides immediate feedback when crossing boundaries
+                const dx = pos.x - app.lastX;
+                const dy = pos.y - app.lastY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const steps = Math.max(Math.floor(distance / 5), 1); // Check every 5 pixels
+
+                let crossedBoundary = false;
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const checkX = Math.round(app.lastX + dx * t);
+                    const checkY = Math.round(app.lastY + dy * t);
+                    if (!isInsideDrawingArea(checkX, checkY)) {
+                        crossedBoundary = true;
+                        break;
+                    }
+                }
+
+                if (crossedBoundary) {
                     // Play sound when coloring outside the lines
                     playOutOfBoundsSound();
                 }
