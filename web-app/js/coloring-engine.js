@@ -15,7 +15,10 @@ const ColoringEngine = {
     lastY: 0,
     undoStack: [],
     currentPicture: null,
-    baseImage: null
+    baseImage: null,
+    boundaryMask: null,
+    boundaryData: null,
+    hasViolatedBoundary: false
 };
 
 /**
@@ -115,6 +118,9 @@ function loadColoringImage(picture) {
             0, 0, ColoringEngine.canvas.width, ColoringEngine.canvas.height
         );
 
+        // Extract boundary mask for detection
+        extractBoundaryMask();
+
         console.log('Coloring image loaded');
     };
 
@@ -213,6 +219,8 @@ function draw(e) {
     const pos = getMousePos(e);
 
     if (ColoringEngine.currentTool === 'brush') {
+        // Check boundary along path before drawing
+        checkBoundaryAlongPath(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
         drawBrush(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
     } else if (ColoringEngine.currentTool === 'eraser') {
         drawEraser(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
@@ -227,6 +235,7 @@ function draw(e) {
  */
 function stopDrawing() {
     ColoringEngine.isDrawing = false;
+    ColoringEngine.hasViolatedBoundary = false;
 }
 
 /**
@@ -259,6 +268,8 @@ function handleTouchMove(e) {
     const pos = getTouchPos(e);
 
     if (ColoringEngine.currentTool === 'brush') {
+        // Check boundary along path before drawing
+        checkBoundaryAlongPath(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
         drawBrush(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
     } else if (ColoringEngine.currentTool === 'eraser') {
         drawEraser(ColoringEngine.lastX, ColoringEngine.lastY, pos.x, pos.y);
@@ -495,6 +506,142 @@ function undo() {
     } else {
         console.log('Nothing to undo');
     }
+}
+
+/**
+ * Extract boundary mask from base image
+ * Creates a binary mask where dark pixels are boundaries
+ */
+function extractBoundaryMask() {
+    if (!ColoringEngine.baseImage) return;
+
+    const width = ColoringEngine.canvas.width;
+    const height = ColoringEngine.canvas.height;
+    const imageData = ColoringEngine.baseImage;
+    const pixels = imageData.data;
+
+    // Create boundary data array
+    ColoringEngine.boundaryData = new Uint8Array(width * height);
+
+    const threshold = 0.3 * 255; // 30% threshold for detecting dark lines
+
+    for (let i = 0; i < width * height; i++) {
+        const pixelIndex = i * 4;
+        const r = pixels[pixelIndex];
+        const g = pixels[pixelIndex + 1];
+        const b = pixels[pixelIndex + 2];
+
+        // Convert to grayscale
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        // Dark pixels are boundaries (1), light pixels are colorable (0)
+        ColoringEngine.boundaryData[i] = gray < threshold ? 1 : 0;
+    }
+
+    console.log('Boundary mask extracted');
+}
+
+/**
+ * Check if a point is on a boundary
+ */
+function isBoundary(x, y) {
+    if (!ColoringEngine.boundaryData) return false;
+
+    const width = ColoringEngine.canvas.width;
+    const height = ColoringEngine.canvas.height;
+
+    // Convert to integers
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+
+    // Bounds check
+    if (ix < 0 || ix >= width || iy < 0 || iy >= height) {
+        return true; // Out of bounds = boundary
+    }
+
+    const index = iy * width + ix;
+    return ColoringEngine.boundaryData[index] === 1;
+}
+
+/**
+ * Check if any point around the brush circumference touches a boundary
+ */
+function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
+    if (!ColoringEngine.boundaryData) return false;
+
+    // Check the center first
+    if (isBoundary(centerX, centerY)) {
+        return true;
+    }
+
+    // Check points around the circumference
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * 2.0 * Math.PI;
+        const x = centerX + Math.cos(angle) * brushRadius;
+        const y = centerY + Math.sin(angle) * brushRadius;
+
+        if (isBoundary(x, y)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Check boundary along the path from start to end
+ * Interpolates points to catch boundaries during fast movements
+ */
+function checkBoundaryAlongPath(x1, y1, x2, y2) {
+    // Don't check if we've already violated in this stroke
+    if (ColoringEngine.hasViolatedBoundary) {
+        return;
+    }
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // If points are very close, just check the end point
+    if (distance < 2.0) {
+        if (isBoundaryAtBrushEdge(x2, y2, 12.0)) {
+            triggerBoundaryFeedback();
+        }
+        return;
+    }
+
+    // Interpolate points along the path (check every ~5 pixels)
+    const steps = Math.max(Math.floor(distance / 5.0), 1);
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = x1 + dx * t;
+        const y = y1 + dy * t;
+
+        // Check with brush radius of 12.0 (matching iOS version)
+        if (isBoundaryAtBrushEdge(x, y, 12.0)) {
+            triggerBoundaryFeedback();
+            break;
+        }
+    }
+}
+
+/**
+ * Trigger feedback when boundary is crossed
+ */
+function triggerBoundaryFeedback() {
+    ColoringEngine.hasViolatedBoundary = true;
+
+    // Play sound if available
+    if (typeof playSound === 'function') {
+        playSound('boundary');
+    }
+
+    // Vibrate if supported
+    if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+    }
+
+    console.log('Boundary violation detected');
 }
 
 // Export for use in other modules
