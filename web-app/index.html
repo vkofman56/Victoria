@@ -442,14 +442,24 @@
                 const r = pixelData[0];
                 const g = pixelData[1];
                 const b = pixelData[2];
-                const a = pixelData[3];
 
-                // If pixel is transparent or very dark (close to black lines), it's outside
-                if (a < 128 || (r < 100 && g < 100 && b < 100)) {
-                    return false; // Outside drawable area
+                // Boundary canvas has gray background (#CCCCCC) with image drawn on top
+                // Gray pixels (≈204) = outside image bounds = OUTSIDE
+                // Dark pixels = black lines = OUTSIDE
+                // White/light pixels = fillable areas = INSIDE
+
+                // If pixel is grayish (outside image bounds on gray background)
+                if (r > 180 && g > 180 && b > 180 &&
+                    Math.abs(r - g) < 20 && Math.abs(g - b) < 20) {
+                    return false; // Outside image bounds (on gray background)
                 }
 
-                // If pixel is white-ish, it's inside the drawable area
+                // If pixel is very dark (black line)
+                if (r < 100 && g < 100 && b < 100) {
+                    return false; // On black line = outside drawable area
+                }
+
+                // Everything else (white areas, light colors) is inside and OK to color
                 return true;
             } catch (e) {
                 console.warn('Boundary check failed:', e);
@@ -629,7 +639,8 @@
                 app.ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
                 // Draw to boundary canvas (for pixel detection)
-                app.boundaryCtx.fillStyle = 'rgba(0, 0, 0, 0)'; // Transparent
+                // Use light gray background to distinguish "outside image" from "transparent inside image"
+                app.boundaryCtx.fillStyle = '#CCCCCC'; // Light gray = outside image
                 app.boundaryCtx.fillRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
                 app.boundaryCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
                 console.log('Image drawn to canvas and boundary canvas ready');
