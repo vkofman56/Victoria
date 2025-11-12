@@ -687,7 +687,8 @@
             img.crossOrigin = 'anonymous'; // Allow cross-origin access
             img.onload = () => {
                 console.log('Image loaded:', img.width, 'x', img.height);
-                const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.98;
+                // Use Math.max to fill canvas completely (may crop edges, but no white space)
+                const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
                 const x = (canvas.width - img.width * scale) / 2;
                 const y = (canvas.height - img.height * scale) / 2;
 
