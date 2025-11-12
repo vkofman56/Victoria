@@ -139,8 +139,8 @@ class ColoringViewModel: ObservableObject {
     }
 
     private func handleFillBucket(at point: CGPoint, color: Color) {
-        // Check if tapping on boundary
-        if boundaryDetector.isBoundary(at: point) {
+        // Check if tapping on or near boundary (using small radius for fill bucket)
+        if boundaryDetector.isBoundaryAtBrushEdge(center: point, brushRadius: 3.0) {
             FeedbackManager.shared.boundaryViolationHaptic()
             return
         }
@@ -174,7 +174,9 @@ class ColoringViewModel: ObservableObject {
             return
         }
 
-        if boundaryDetector.isBoundary(at: point) && !hasViolatedBoundary {
+        // Check brush edges (radius = 5.0 to match brush size of 10.0 in DrawingEngine)
+        // This checks multiple points around the brush circumference for accurate detection
+        if boundaryDetector.isBoundaryAtBrushEdge(center: point, brushRadius: 5.0) && !hasViolatedBoundary {
             hasViolatedBoundary = true
             lastBoundaryCheckTime = Date()
             FeedbackManager.shared.boundaryViolationHaptic()

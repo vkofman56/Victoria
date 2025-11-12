@@ -115,6 +115,50 @@ class BoundaryDetector {
         return data[index] < 128
     }
 
+    /// Check if any point around the brush circumference touches a boundary
+    /// This provides more accurate boundary detection by checking the brush edges
+    /// - Parameters:
+    ///   - center: Center point of the brush
+    ///   - brushRadius: Radius of the brush in pixels
+    ///   - numPoints: Number of points to check around the circumference (default: 12)
+    /// - Returns: True if any point on the brush edge touches a boundary
+    func isBoundaryAtBrushEdge(center: CGPoint, brushRadius: CGFloat, numPoints: Int = 12) -> Bool {
+        guard let data = maskData else { return false }
+
+        // Check the center first
+        if isBoundary(at: center) {
+            return true
+        }
+
+        // Check points around the circumference
+        for i in 0..<numPoints {
+            let angle = (CGFloat(i) / CGFloat(numPoints)) * 2.0 * .pi
+            let x = center.x + cos(angle) * brushRadius
+            let y = center.y + sin(angle) * brushRadius
+
+            let edgePoint = CGPoint(x: x, y: y)
+
+            // Check this edge point
+            let pixelX = Int(edgePoint.x)
+            let pixelY = Int(edgePoint.y)
+
+            // Bounds check
+            if pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height {
+                return true // Out of bounds = boundary
+            }
+
+            let index = pixelY * width + pixelX
+            guard index < data.count else { return true }
+
+            // Black pixel (0) = boundary
+            if data[index] < 128 {
+                return true
+            }
+        }
+
+        return false
+    }
+
     /// Check if any point in array crosses boundary
     func detectBoundaryViolation(in points: [CGPoint]) -> Bool {
         // Sample points (don't check every single one for performance)
