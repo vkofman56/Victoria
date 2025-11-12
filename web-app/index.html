@@ -198,13 +198,15 @@
 
         .canvas-wrapper {
             position: relative;
-            width: 90%;
-            height: 60%;
+            width: 95vmin;
+            height: 95vmin;
+            max-width: 95vh;
+            max-height: 95vh;
             border: 3px solid #333;
             border-radius: 12px;
             overflow: hidden;
-            background: white;
-            margin-bottom: 20px;
+            background: #e0e0e0;
+            margin-bottom: 10px;
         }
 
         canvas {
@@ -357,7 +359,7 @@
         <!-- COLORING VIEW -->
         <div id="coloring-view" class="view">
             <div class="coloring-container">
-                <h2 id="coloring-title" style="color: #667eea; margin-bottom: 20px;">Color Me!</h2>
+                <h2 id="coloring-title" style="color: #667eea; margin-bottom: 15px; font-size: 2.5em; font-weight: bold;">Color Me!</h2>
                 <div class="canvas-wrapper">
                     <canvas id="coloring-canvas"></canvas>
                     <canvas id="drawing-canvas"></canvas>
@@ -442,6 +444,12 @@
                 const r = pixelData[0];
                 const g = pixelData[1];
                 const b = pixelData[2];
+                const a = pixelData[3]; // Alpha channel
+
+                // Check if pixel is transparent (outside the image)
+                if (a === 0 || a < 10) {
+                    return false; // Transparent = outside drawable area
+                }
 
                 // Simple approach: Only detect BLACK LINES (the outlines)
                 // Everything else (white, transparent areas, colors) is OK to color
@@ -583,7 +591,7 @@
         function openColoring(index) {
             app.currentPictureIndex = index;
             const picture = app.currentPage.pictures[index];
-            document.getElementById('coloring-title').textContent = `Color: ${picture.word}`;
+            document.getElementById('coloring-title').textContent = picture.word;
 
             // Remove blinking
             document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('blinking'));
@@ -623,20 +631,21 @@
             img.crossOrigin = 'anonymous'; // Allow cross-origin access
             img.onload = () => {
                 console.log('Image loaded:', img.width, 'x', img.height);
-                const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
+                const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.98;
                 const x = (canvas.width - img.width * scale) / 2;
                 const y = (canvas.height - img.height * scale) / 2;
 
-                // Draw to visible canvas
-                app.ctx.fillStyle = 'white';
-                app.ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // Clear and draw to visible canvas (no background fill - leave transparent)
+                app.ctx.clearRect(0, 0, canvas.width, canvas.height);
                 app.ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
                 // Draw to boundary canvas (for pixel detection)
-                // Use white background (same as visible canvas)
-                app.boundaryCtx.fillStyle = 'white';
-                app.boundaryCtx.fillRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
+                // Clear background first
+                app.boundaryCtx.clearRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
                 app.boundaryCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+                // Store the image bounds for drawing restriction
+                app.imageBounds = { x, y, width: img.width * scale, height: img.height * scale };
                 console.log('Image drawn to canvas and boundary canvas ready');
             };
             img.onerror = () => {
