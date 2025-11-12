@@ -443,28 +443,17 @@
                 const g = pixelData[1];
                 const b = pixelData[2];
 
-                // Boundary canvas has gray background (#CCCCCC = rgb(204,204,204)) with image drawn on top
-                // - Black lines = rgb < 100 = OUTSIDE
-                // - Gray background = rgb ≈180-220 (but NOT white 240+) = OUTSIDE
-                // - White fillable areas = rgb > 240 = INSIDE
-                // - Other colors inside image = INSIDE
+                // Simple approach: Only detect BLACK LINES (the outlines)
+                // Everything else (white, transparent areas, colors) is OK to color
+                // Black threshold: all RGB values must be low
+                const threshold = 128; // Adjusted threshold for better detection
 
-                // First check: If pixel is very dark (black line or dark area)
-                if (r < 100 && g < 100 && b < 100) {
+                if (r < threshold && g < threshold && b < threshold) {
+                    // This is a dark pixel (likely part of the black outline)
                     return false; // On black line = outside drawable area
                 }
 
-                // Second check: If pixel is gray background (not pure white)
-                // Gray is #CCCCCC (204,204,204) - check for values in gray range but exclude white
-                const avgColor = (r + g + b) / 3;
-                const isGrayish = r > 180 && r < 230 && g > 180 && g < 230 && b > 180 && b < 230;
-                const isUniform = Math.abs(r - g) < 20 && Math.abs(g - b) < 20;
-
-                if (isGrayish && isUniform && avgColor < 240) {
-                    return false; // Outside image bounds (on gray background)
-                }
-
-                // Everything else (white areas, colored areas) is inside and OK to color
+                // Everything else is inside and OK to color
                 return true;
             } catch (e) {
                 console.warn('Boundary check failed:', e);
@@ -644,8 +633,8 @@
                 app.ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
                 // Draw to boundary canvas (for pixel detection)
-                // Use light gray background to distinguish "outside image" from "transparent inside image"
-                app.boundaryCtx.fillStyle = '#CCCCCC'; // Light gray = outside image
+                // Use white background (same as visible canvas)
+                app.boundaryCtx.fillStyle = 'white';
                 app.boundaryCtx.fillRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
                 app.boundaryCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
                 console.log('Image drawn to canvas and boundary canvas ready');
