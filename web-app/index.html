@@ -444,12 +444,6 @@
                 const r = pixelData[0];
                 const g = pixelData[1];
                 const b = pixelData[2];
-                const a = pixelData[3]; // Alpha channel
-
-                // Check if pixel is transparent (outside the image)
-                if (a === 0 || a < 10) {
-                    return false; // Transparent = outside drawable area
-                }
 
                 // Simple approach: Only detect BLACK LINES (the outlines)
                 // Everything else (white, transparent areas, colors) is OK to color
