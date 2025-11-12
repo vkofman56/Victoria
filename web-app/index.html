@@ -443,23 +443,28 @@
                 const g = pixelData[1];
                 const b = pixelData[2];
 
-                // Boundary canvas has gray background (#CCCCCC) with image drawn on top
-                // Gray pixels (≈204) = outside image bounds = OUTSIDE
-                // Dark pixels = black lines = OUTSIDE
-                // White/light pixels = fillable areas = INSIDE
+                // Boundary canvas has gray background (#CCCCCC = rgb(204,204,204)) with image drawn on top
+                // - Black lines = rgb < 100 = OUTSIDE
+                // - Gray background = rgb ≈180-220 (but NOT white 240+) = OUTSIDE
+                // - White fillable areas = rgb > 240 = INSIDE
+                // - Other colors inside image = INSIDE
 
-                // If pixel is grayish (outside image bounds on gray background)
-                if (r > 180 && g > 180 && b > 180 &&
-                    Math.abs(r - g) < 20 && Math.abs(g - b) < 20) {
-                    return false; // Outside image bounds (on gray background)
-                }
-
-                // If pixel is very dark (black line)
+                // First check: If pixel is very dark (black line or dark area)
                 if (r < 100 && g < 100 && b < 100) {
                     return false; // On black line = outside drawable area
                 }
 
-                // Everything else (white areas, light colors) is inside and OK to color
+                // Second check: If pixel is gray background (not pure white)
+                // Gray is #CCCCCC (204,204,204) - check for values in gray range but exclude white
+                const avgColor = (r + g + b) / 3;
+                const isGrayish = r > 180 && r < 230 && g > 180 && g < 230 && b > 180 && b < 230;
+                const isUniform = Math.abs(r - g) < 20 && Math.abs(g - b) < 20;
+
+                if (isGrayish && isUniform && avgColor < 240) {
+                    return false; // Outside image bounds (on gray background)
+                }
+
+                // Everything else (white areas, colored areas) is inside and OK to color
                 return true;
             } catch (e) {
                 console.warn('Boundary check failed:', e);
