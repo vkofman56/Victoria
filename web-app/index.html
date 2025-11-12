@@ -682,6 +682,8 @@
             const pos = getPos(e);
 
             if (app.currentTool === 'brush') {
+                const brushRadius = 7.5; // Half of lineWidth (15)
+
                 // Check multiple points along the line for boundary detection
                 // This provides immediate feedback when crossing boundaries
                 const dx = pos.x - app.lastX;
@@ -692,12 +694,31 @@
                 let crossedBoundary = false;
                 for (let i = 0; i <= steps; i++) {
                     const t = i / steps;
-                    const checkX = Math.round(app.lastX + dx * t);
-                    const checkY = Math.round(app.lastY + dy * t);
-                    if (!isInsideDrawingArea(checkX, checkY)) {
-                        crossedBoundary = true;
-                        break;
+                    const centerX = app.lastX + dx * t;
+                    const centerY = app.lastY + dy * t;
+
+                    // Check center and points at brush radius (edges of the brush)
+                    // Check 8 points around the circle: N, NE, E, SE, S, SW, W, NW
+                    const checkPoints = [
+                        { x: centerX, y: centerY }, // Center
+                        { x: centerX, y: centerY - brushRadius }, // N
+                        { x: centerX + brushRadius, y: centerY }, // E
+                        { x: centerX, y: centerY + brushRadius }, // S
+                        { x: centerX - brushRadius, y: centerY }, // W
+                        { x: centerX + brushRadius * 0.7, y: centerY - brushRadius * 0.7 }, // NE
+                        { x: centerX + brushRadius * 0.7, y: centerY + brushRadius * 0.7 }, // SE
+                        { x: centerX - brushRadius * 0.7, y: centerY + brushRadius * 0.7 }, // SW
+                        { x: centerX - brushRadius * 0.7, y: centerY - brushRadius * 0.7 }  // NW
+                    ];
+
+                    for (const point of checkPoints) {
+                        if (!isInsideDrawingArea(Math.round(point.x), Math.round(point.y))) {
+                            crossedBoundary = true;
+                            break;
+                        }
                     }
+
+                    if (crossedBoundary) break;
                 }
 
                 if (crossedBoundary) {
