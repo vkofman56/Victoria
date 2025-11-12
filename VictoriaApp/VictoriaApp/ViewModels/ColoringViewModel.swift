@@ -111,10 +111,15 @@ class ColoringViewModel: ObservableObject {
     // MARK: - Drawing Operations
 
     private func handleBrushStroke(at point: CGPoint, color: Color) {
-        strokePoints.append(point)
+        // If we have a previous point, check interpolated points along the path
+        if let lastPoint = strokePoints.last {
+            checkBoundaryAlongPath(from: lastPoint, to: point)
+        } else {
+            // First point - just check this location
+            checkBoundaryViolation(at: point)
+        }
 
-        // Check boundary
-        checkBoundaryViolation(at: point)
+        strokePoints.append(point)
 
         // Apply color
         guard var bitmap = coloringBitmap else { return }
@@ -168,18 +173,53 @@ class ColoringViewModel: ObservableObject {
     // MARK: - Boundary Detection
 
     private func checkBoundaryViolation(at point: CGPoint) {
-        // Debounce boundary checks
-        if let lastCheck = lastBoundaryCheckTime,
-           Date().timeIntervalSince(lastCheck) < 0.2 {
+        // Don't check if we've already detected a violation in this stroke
+        if hasViolatedBoundary {
             return
         }
 
-        // Check brush edges (radius = 5.0 to match brush size of 10.0 in DrawingEngine)
+        // Check brush edges (radius = 12.0 to account for brush size + anti-aliasing)
         // This checks multiple points around the brush circumference for accurate detection
-        if boundaryDetector.isBoundaryAtBrushEdge(center: point, brushRadius: 5.0) && !hasViolatedBoundary {
+        if boundaryDetector.isBoundaryAtBrushEdge(center: point, brushRadius: 12.0) {
             hasViolatedBoundary = true
             lastBoundaryCheckTime = Date()
             FeedbackManager.shared.boundaryViolationHaptic()
+        }
+    }
+
+    /// Check boundary along the path from last point to current point
+    /// This ensures we detect boundaries even during fast brush movements
+    private func checkBoundaryAlongPath(from start: CGPoint, to end: CGPoint) {
+        // If we've already violated, don't check again
+        if hasViolatedBoundary {
+            return
+        }
+
+        // Calculate distance between points
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let distance = sqrt(dx * dx + dy * dy)
+
+        // If points are very close, just check the end point
+        if distance < 2.0 {
+            checkBoundaryViolation(at: end)
+            return
+        }
+
+        // Interpolate points along the path (check every ~5 pixels)
+        let steps = max(Int(distance / 5.0), 1)
+        for i in 0...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            let interpolatedPoint = CGPoint(
+                x: start.x + dx * t,
+                y: start.y + dy * t
+            )
+            checkBoundaryViolation(at: interpolatedPoint)
+
+            // Stop checking if we found a violation
+            if hasViolatedBoundary {
+                break
+            }
         }
     }
 
