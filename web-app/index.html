@@ -205,7 +205,7 @@
             border: 3px solid #333;
             border-radius: 12px;
             overflow: hidden;
-            background: #e0e0e0;
+            background: white;
             margin-bottom: 10px;
         }
 
@@ -629,13 +629,14 @@
                 const x = (canvas.width - img.width * scale) / 2;
                 const y = (canvas.height - img.height * scale) / 2;
 
-                // Clear and draw to visible canvas (no background fill - leave transparent)
-                app.ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // Fill visible canvas with white background
+                app.ctx.fillStyle = 'white';
+                app.ctx.fillRect(0, 0, canvas.width, canvas.height);
                 app.ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
                 // Draw to boundary canvas (for pixel detection)
-                // Clear background first
-                app.boundaryCtx.clearRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
+                app.boundaryCtx.fillStyle = 'white';
+                app.boundaryCtx.fillRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
                 app.boundaryCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
                 // Store the image bounds for drawing restriction
@@ -684,47 +685,11 @@
             if (!app.isDrawing) return;
             const pos = getPos(e);
 
+            // Check if drawing inside valid area (only once per move)
+            const insideBounds = isInsideDrawingArea(pos.x, pos.y);
+
             if (app.currentTool === 'brush') {
-                const brushRadius = 7.5; // Half of lineWidth (15)
-
-                // Check multiple points along the line for boundary detection
-                // This provides immediate feedback when crossing boundaries
-                const dx = pos.x - app.lastX;
-                const dy = pos.y - app.lastY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const steps = Math.max(Math.floor(distance / 5), 1); // Check every 5 pixels
-
-                let crossedBoundary = false;
-                for (let i = 0; i <= steps; i++) {
-                    const t = i / steps;
-                    const centerX = app.lastX + dx * t;
-                    const centerY = app.lastY + dy * t;
-
-                    // Check center and points at brush radius (edges of the brush)
-                    // Check 8 points around the circle: N, NE, E, SE, S, SW, W, NW
-                    const checkPoints = [
-                        { x: centerX, y: centerY }, // Center
-                        { x: centerX, y: centerY - brushRadius }, // N
-                        { x: centerX + brushRadius, y: centerY }, // E
-                        { x: centerX, y: centerY + brushRadius }, // S
-                        { x: centerX - brushRadius, y: centerY }, // W
-                        { x: centerX + brushRadius * 0.7, y: centerY - brushRadius * 0.7 }, // NE
-                        { x: centerX + brushRadius * 0.7, y: centerY + brushRadius * 0.7 }, // SE
-                        { x: centerX - brushRadius * 0.7, y: centerY + brushRadius * 0.7 }, // SW
-                        { x: centerX - brushRadius * 0.7, y: centerY - brushRadius * 0.7 }  // NW
-                    ];
-
-                    for (const point of checkPoints) {
-                        if (!isInsideDrawingArea(Math.round(point.x), Math.round(point.y))) {
-                            crossedBoundary = true;
-                            break;
-                        }
-                    }
-
-                    if (crossedBoundary) break;
-                }
-
-                if (crossedBoundary) {
+                if (!insideBounds) {
                     // Play sound when coloring outside the lines
                     playOutOfBoundsSound();
                 }
