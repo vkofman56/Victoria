@@ -693,12 +693,17 @@
             const drawingCanvas = document.getElementById('drawing-canvas');
             const wrapper = document.querySelector('.canvas-wrapper');
 
-            canvas.width = wrapper.clientWidth;
-            canvas.height = wrapper.clientHeight;
-            drawingCanvas.width = canvas.width;
-            drawingCanvas.height = canvas.height;
+            // Get the actual rendered size
+            const rect = wrapper.getBoundingClientRect();
+            const size = Math.min(rect.width, rect.height);
+
+            canvas.width = size;
+            canvas.height = size;
+            drawingCanvas.width = size;
+            drawingCanvas.height = size;
 
             console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+            console.log('Wrapper size:', rect.width, 'x', rect.height);
 
             app.ctx = canvas.getContext('2d');
             app.drawingCtx = drawingCanvas.getContext('2d');
@@ -818,11 +823,18 @@
         }
 
         function getPos(e) {
-            const rect = e.target.getBoundingClientRect();
-            return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+
+            // Calculate the scale between display size and canvas resolution
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            // Get position relative to canvas and scale to canvas coordinates
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            return { x, y };
         }
 
         function handleTouch(e) {
