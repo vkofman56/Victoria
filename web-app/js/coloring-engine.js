@@ -175,14 +175,31 @@ function setupColoringEventListeners() {
 }
 
 /**
+ * Get current zoom scale from canvas wrapper
+ */
+function getZoomScale() {
+    const wrapper = document.getElementById('canvas-wrapper');
+    if (wrapper && wrapper.style.transform) {
+        const match = wrapper.style.transform.match(/scale\(([^)]+)\)/);
+        if (match && match[1]) {
+            return parseFloat(match[1]);
+        }
+    }
+    return 1;
+}
+
+/**
  * Get coordinates from mouse event
  */
 function getMousePos(e) {
     const rect = ColoringEngine.drawingCanvas.getBoundingClientRect();
-    return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-    };
+    const zoomScale = getZoomScale();
+
+    // Account for zoom transformation
+    const x = (e.clientX - rect.left) / zoomScale;
+    const y = (e.clientY - rect.top) / zoomScale;
+
+    return { x, y };
 }
 
 /**
@@ -191,10 +208,13 @@ function getMousePos(e) {
 function getTouchPos(e) {
     const rect = ColoringEngine.drawingCanvas.getBoundingClientRect();
     const touch = e.touches[0];
-    return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
-    };
+    const zoomScale = getZoomScale();
+
+    // Account for zoom transformation
+    const x = (touch.clientX - rect.left) / zoomScale;
+    const y = (touch.clientY - rect.top) / zoomScale;
+
+    return { x, y };
 }
 
 /**
