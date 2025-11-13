@@ -175,44 +175,50 @@ function setupColoringEventListeners() {
 }
 
 /**
- * Get current zoom scale from canvas wrapper
- */
-function getZoomScale() {
-    const wrapper = document.getElementById('canvas-wrapper');
-    if (wrapper && wrapper.style.transform) {
-        const match = wrapper.style.transform.match(/scale\(([^)]+)\)/);
-        if (match && match[1]) {
-            return parseFloat(match[1]);
-        }
-    }
-    return 1;
-}
-
-/**
  * Get coordinates from mouse event
+ * Properly handles CSS transforms (scale, translate) by using the rect dimensions
  */
 function getMousePos(e) {
-    const rect = ColoringEngine.drawingCanvas.getBoundingClientRect();
-    const zoomScale = getZoomScale();
+    const canvas = ColoringEngine.drawingCanvas;
+    const rect = canvas.getBoundingClientRect();
 
-    // Account for zoom transformation
-    const x = (e.clientX - rect.left) / zoomScale;
-    const y = (e.clientY - rect.top) / zoomScale;
+    // Calculate the scale between canvas internal dimensions and displayed dimensions
+    // rect dimensions include all CSS transforms (zoom, scale, etc.)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    // Get position relative to the transformed rect
+    const relX = e.clientX - rect.left;
+    const relY = e.clientY - rect.top;
+
+    // Map from displayed coordinates to canvas coordinates
+    const x = relX * scaleX;
+    const y = relY * scaleY;
 
     return { x, y };
 }
 
 /**
  * Get coordinates from touch event
+ * Properly handles CSS transforms (scale, translate) by using the rect dimensions
  */
 function getTouchPos(e) {
-    const rect = ColoringEngine.drawingCanvas.getBoundingClientRect();
+    const canvas = ColoringEngine.drawingCanvas;
+    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const zoomScale = getZoomScale();
 
-    // Account for zoom transformation
-    const x = (touch.clientX - rect.left) / zoomScale;
-    const y = (touch.clientY - rect.top) / zoomScale;
+    // Calculate the scale between canvas internal dimensions and displayed dimensions
+    // rect dimensions include all CSS transforms (zoom, scale, etc.)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    // Get position relative to the transformed rect
+    const relX = touch.clientX - rect.left;
+    const relY = touch.clientY - rect.top;
+
+    // Map from displayed coordinates to canvas coordinates
+    const x = relX * scaleX;
+    const y = relY * scaleY;
 
     return { x, y };
 }
