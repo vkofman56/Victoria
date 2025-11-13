@@ -131,17 +131,8 @@
 
         .picture-box img {
             width: 100%;
-            height: auto;
-            max-height: 80%;
+            height: 100%;
             object-fit: contain;
-        }
-
-        .word-label {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #333;
-            text-align: center;
-            margin-top: 5px;
         }
 
         /* CENTER CIRCLE */
@@ -346,19 +337,15 @@
                 <div class="picture-grid">
                     <div class="picture-box">
                         <img id="img1" src="" alt="">
-                        <div class="word-label" id="word1"></div>
                     </div>
                     <div class="picture-box">
                         <img id="img2" src="" alt="">
-                        <div class="word-label" id="word2"></div>
                     </div>
                     <div class="picture-box">
                         <img id="img3" src="" alt="">
-                        <div class="word-label" id="word3"></div>
                     </div>
                     <div class="picture-box">
                         <img id="img4" src="" alt="">
-                        <div class="word-label" id="word4"></div>
                     </div>
 
                     <div class="center-circle">
@@ -612,11 +599,10 @@
             app.currentPage = pages.find(p => p.id === pageId);
             document.getElementById('page-num').textContent = app.currentPage.number;
 
-            // Set images and words
+            // Set images
             for (let i = 0; i < 4; i++) {
                 const pic = app.currentPage.pictures[i];
                 document.getElementById(`img${i+1}`).src = pic.image;
-                document.getElementById(`word${i+1}`).textContent = pic.word;
             }
 
             // Start blinking
