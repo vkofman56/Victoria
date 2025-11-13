@@ -364,8 +364,46 @@
             }
         }
 
-        /* Landscape orientation - maximize space even more */
-        @media (orientation: landscape) {
+        /* Landscape orientation on mobile/tablet - switch to bottom palette */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .coloring-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .canvas-wrapper {
+                max-width: 95vw;
+                max-height: calc(100vh - 150px);
+            }
+
+            .controls-sidebar {
+                flex-direction: row;
+                gap: 15px;
+                padding: 10px;
+                min-width: unset;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .color-palette {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .tools {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .tool-button {
+                min-width: 70px;
+                font-size: 0.8em;
+                padding: 6px 10px;
+            }
+        }
+
+        /* Desktop landscape - keep palette on right side */
+        @media (min-width: 769px) and (orientation: landscape) {
             .canvas-wrapper {
                 max-width: calc(100vh - 20px);
                 max-height: calc(100vh - 20px);
