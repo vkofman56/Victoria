@@ -180,20 +180,21 @@
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             justify-content: center;
             background: white;
             padding: 10px;
+            gap: 20px;
         }
 
         .canvas-wrapper {
             position: relative;
-            width: min(95vmin, calc(100vh - 200px));
-            height: min(95vmin, calc(100vh - 200px));
+            flex: 1;
+            max-width: calc(100vh - 40px);
+            max-height: calc(100vh - 40px);
             aspect-ratio: 1;
             background: white;
-            margin-bottom: 10px;
         }
 
         canvas {
@@ -211,17 +212,26 @@
             z-index: 2;
         }
 
+        .controls-sidebar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            min-width: 120px;
+        }
+
         .color-palette {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
         }
 
         .color-swatch {
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
             cursor: pointer;
             transition: transform 0.2s;
@@ -240,21 +250,23 @@
 
         .tools {
             display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
         }
 
         .tool-button {
             background: white;
             border: 2px solid #667eea;
             border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 1.1em;
+            padding: 10px 20px;
+            font-size: 1em;
             cursor: pointer;
             transition: all 0.2s;
             color: #667eea;
             font-weight: bold;
+            white-space: nowrap;
+            min-width: 100px;
         }
 
         .tool-button:hover,
@@ -285,9 +297,14 @@
 
         /* Responsive design for mobile devices */
         @media (max-width: 768px) {
-            .canvas-wrapper {
-                width: min(98vmin, calc(100vh - 160px));
-                height: min(98vmin, calc(100vh - 160px));
+            .coloring-container {
+                gap: 10px;
+                padding: 5px;
+            }
+
+            .controls-sidebar {
+                padding: 10px;
+                min-width: 80px;
             }
 
             .color-palette {
@@ -295,13 +312,14 @@
             }
 
             .color-swatch {
-                width: 40px;
-                height: 40px;
+                width: 45px;
+                height: 45px;
             }
 
             .tool-button {
-                padding: 8px 16px;
-                font-size: 0.9em;
+                padding: 8px 12px;
+                font-size: 0.85em;
+                min-width: 80px;
             }
 
             .back-button {
@@ -310,11 +328,47 @@
             }
         }
 
+        /* Portrait orientation on mobile - switch to vertical layout */
+        @media (max-width: 768px) and (orientation: portrait) {
+            .coloring-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .canvas-wrapper {
+                max-width: 95vw;
+                max-height: calc(100vh - 250px);
+            }
+
+            .controls-sidebar {
+                flex-direction: row;
+                gap: 15px;
+                padding: 10px;
+                min-width: unset;
+            }
+
+            .color-palette {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .tools {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .tool-button {
+                min-width: 70px;
+                font-size: 0.8em;
+                padding: 6px 10px;
+            }
+        }
+
         /* Landscape orientation - maximize space even more */
         @media (orientation: landscape) {
             .canvas-wrapper {
-                width: min(98vmin, calc(100vh - 140px));
-                height: min(98vmin, calc(100vh - 140px));
+                max-width: calc(100vh - 20px);
+                max-height: calc(100vh - 20px);
             }
         }
     </style>
@@ -381,12 +435,14 @@
                     <canvas id="coloring-canvas"></canvas>
                     <canvas id="drawing-canvas"></canvas>
                 </div>
-                <div class="color-palette" id="palette"></div>
-                <div class="tools">
-                    <button class="tool-button active" data-tool="brush" onclick="selectTool('brush')">🖌️ Brush</button>
-                    <button class="tool-button" data-tool="eraser" onclick="selectTool('eraser')">🧹 Eraser</button>
-                    <button class="tool-button" onclick="undo()">↶ Undo</button>
-                    <button class="tool-button" onclick="clearCanvas()">🗑️ Clear</button>
+                <div class="controls-sidebar">
+                    <div class="color-palette" id="palette"></div>
+                    <div class="tools">
+                        <button class="tool-button active" data-tool="brush" onclick="selectTool('brush')">🖌️ Brush</button>
+                        <button class="tool-button" data-tool="eraser" onclick="selectTool('eraser')">🧹 Eraser</button>
+                        <button class="tool-button" onclick="undo()">↶ Undo</button>
+                        <button class="tool-button" onclick="clearCanvas()">🗑️ Clear</button>
+                    </div>
                 </div>
                 <button class="back-button" onclick="showType1Page()">← Back to Page</button>
             </div>
