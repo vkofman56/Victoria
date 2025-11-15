@@ -318,6 +318,37 @@
             transform: scale(0.95);
         }
 
+        .zoom-return-btn {
+            width: 44px;
+            height: 44px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            margin-top: 8px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+        }
+
+        .zoom-return-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .zoom-return-btn:active {
+            transform: scale(0.95);
+        }
+
         .back-button {
             position: absolute;
             top: 20px;
@@ -517,8 +548,9 @@
                 <!-- Zoom Controls -->
                 <div id="zoom-controls">
                     <button id="zoom-in" class="zoom-btn" title="Zoom In">+</button>
-                    <button id="zoom-reset" class="zoom-btn" title="Reset Zoom">⟲</button>
                     <button id="zoom-out" class="zoom-btn" title="Zoom Out">−</button>
+                    <button id="zoom-reset" class="zoom-btn" title="Reset Zoom">⟲</button>
+                    <button id="zoom-return" class="zoom-return-btn" title="Return" onclick="showType1Page()">←</button>
                 </div>
                 <div class="canvas-wrapper" id="canvas-wrapper">
                     <canvas id="coloring-canvas"></canvas>
@@ -533,7 +565,6 @@
                         <button class="tool-button" onclick="clearCanvas()">🗑️ Clear</button>
                     </div>
                 </div>
-                <button class="back-button" onclick="showType1Page()">← Back to Page</button>
             </div>
         </div>
     </div>
@@ -565,7 +596,7 @@
                 scale: 1,
                 translateX: 0,
                 translateY: 0,
-                minScale: 0.5,
+                minScale: 1,
                 maxScale: 3,
                 step: 0.2,
                 isPanning: false,
@@ -942,22 +973,18 @@
             const canvas = e.target;
             const rect = canvas.getBoundingClientRect();
 
-            // Calculate the scale between display size and canvas resolution
+            // Get position relative to the visible canvas (already includes zoom transformation)
+            const clientX = e.clientX - rect.left;
+            const clientY = e.clientY - rect.top;
+
+            // The rect dimensions already include the zoom scale
+            // So we just need to map from the visual size to the canvas internal resolution
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
-            // Get position relative to canvas
-            let clientX = e.clientX;
-            let clientY = e.clientY;
-
-            // Account for zoom transformation
-            // The canvas is transformed, so we need to inverse the transformation
-            const adjustedX = (clientX - rect.left) / app.zoom.scale;
-            const adjustedY = (clientY - rect.top) / app.zoom.scale;
-
-            // Scale to canvas coordinates
-            const x = adjustedX * scaleX;
-            const y = adjustedY * scaleY;
+            // Convert to canvas coordinates
+            const x = clientX * scaleX;
+            const y = clientY * scaleY;
 
             return { x, y };
         }
