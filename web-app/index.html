@@ -687,14 +687,17 @@
             }
         }
 
-        // Measure how far the brush has penetrated into the black line
+        // Measure how far the brush edge has penetrated into the black line
         function measurePenetrationDepth(centerX, centerY, angle, brushRadius) {
             const threshold = 128;
             let penetration = 0;
-            const maxCheck = brushRadius + 20; // Check a bit beyond brush edge
 
-            // Cast ray from center outward along the angle
-            for (let r = brushRadius; r < maxCheck; r++) {
+            // Cast ray from center outward to find where black line starts
+            // Then measure how far past that point the edge is
+            let lineStartDistance = -1;
+
+            // Search from center outward to find where black line starts
+            for (let r = 0; r <= brushRadius + 20; r++) {
                 const checkX = Math.round(centerX + Math.cos(angle) * r);
                 const checkY = Math.round(centerY + Math.sin(angle) * r);
 
@@ -703,11 +706,21 @@
                     const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
 
                     if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                        penetration++;
+                        if (lineStartDistance === -1) {
+                            lineStartDistance = r;
+                        }
                     } else {
-                        break; // Exited the black line
+                        // Exited black line
+                        if (lineStartDistance !== -1) {
+                            break;
+                        }
                     }
                 }
+            }
+
+            // If we found a line and the brush edge is past where it started
+            if (lineStartDistance !== -1 && brushRadius >= lineStartDistance) {
+                penetration = brushRadius - lineStartDistance;
             }
 
             return penetration;
