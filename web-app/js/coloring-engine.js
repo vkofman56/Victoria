@@ -590,7 +590,8 @@ function isBoundary(x, y) {
 }
 
 /**
- * Check if any point around the brush circumference touches a boundary
+ * Check if the brush has crossed enough into a boundary (20-25% threshold)
+ * This allows the brush to touch the line without immediately triggering the sound
  */
 function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     if (!ColoringEngine.boundaryData) return false;
@@ -600,11 +601,17 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
         return true;
     }
 
-    // Check points around the circumference
+    // Define penetration threshold: 22.5% of brush radius (midpoint of 20-25%)
+    const penetrationThreshold = brushRadius * 0.225;
+
+    // Check points from edge inward at the threshold distance
+    // This creates a smaller circle inside the brush
+    const checkRadius = brushRadius - penetrationThreshold;
+
     for (let i = 0; i < numPoints; i++) {
         const angle = (i / numPoints) * 2.0 * Math.PI;
-        const x = centerX + Math.cos(angle) * brushRadius;
-        const y = centerY + Math.sin(angle) * brushRadius;
+        const x = centerX + Math.cos(angle) * checkRadius;
+        const y = centerY + Math.sin(angle) * checkRadius;
 
         if (isBoundary(x, y)) {
             return true;
