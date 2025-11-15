@@ -653,12 +653,6 @@
                 const numPoints = 8;
                 const angleStep = (Math.PI * 2) / numPoints;
 
-                // Check center point
-                let pixelData = app.boundaryCtx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
-                if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                    return false; // Center is on black line
-                }
-
                 // Check points around the brush perimeter at full radius (edge of brush)
                 for (let i = 0; i < numPoints; i++) {
                     const angle = i * angleStep;
