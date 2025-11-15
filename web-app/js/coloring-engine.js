@@ -596,29 +596,45 @@ function isBoundary(x, y) {
 function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     if (!ColoringEngine.boundaryData) return false;
 
-    // Check the center first
+    // Check the center first - if center is on boundary, we've definitely crossed enough
     if (isBoundary(centerX, centerY)) {
         return true;
     }
 
-    // Define penetration threshold: 22.5% of brush radius (midpoint of 20-25%)
+    // Penetration threshold: 22.5% of brush radius (midpoint of 20-25%)
     const penetrationThreshold = brushRadius * 0.225;
 
-    // Check points from edge inward at the threshold distance
-    // This creates a smaller circle inside the brush
-    const checkRadius = brushRadius - penetrationThreshold;
+    // Check radial lines from edge toward center
+    // Count how many have boundary pixels deep enough inside
+    let deepPenetrations = 0;
 
     for (let i = 0; i < numPoints; i++) {
         const angle = (i / numPoints) * 2.0 * Math.PI;
-        const x = centerX + Math.cos(angle) * checkRadius;
-        const y = centerY + Math.sin(angle) * checkRadius;
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
 
-        if (isBoundary(x, y)) {
-            return true;
+        // Start from the edge of the brush
+        const edgeX = centerX + dx * brushRadius;
+        const edgeY = centerY + dy * brushRadius;
+
+        // Check if there's a boundary at the edge
+        if (!isBoundary(edgeX, edgeY)) {
+            continue; // No boundary on this radial, skip
+        }
+
+        // There's a boundary at the edge, now check if it extends inward past our threshold
+        // Check a point that's penetrationThreshold distance inward from the edge
+        const checkX = centerX + dx * (brushRadius - penetrationThreshold);
+        const checkY = centerY + dy * (brushRadius - penetrationThreshold);
+
+        if (isBoundary(checkX, checkY)) {
+            // Boundary extends deep enough into the brush
+            deepPenetrations++;
         }
     }
 
-    return false;
+    // Trigger if at least one radial line shows deep penetration
+    return deepPenetrations > 0;
 }
 
 /**
