@@ -669,6 +669,8 @@
                             const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
                             const lineThickness = estimateLineThickness(edgeX, edgeY, angle);
 
+                            console.log(`Edge hit: penetration=${penetration}, lineThickness=${lineThickness}, threshold=${penetrationThreshold}, trigger=${penetration > lineThickness * penetrationThreshold}`);
+
                             // Only trigger sound if penetration exceeds threshold
                             if (lineThickness > 0 && penetration > lineThickness * penetrationThreshold) {
                                 return false;
