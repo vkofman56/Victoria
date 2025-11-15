@@ -647,9 +647,9 @@
 
             try {
                 const threshold = 128; // Black threshold
+                const penetrationThreshold = 0.25; // Allow 25% penetration into line before sound
 
                 // Check multiple points around the brush circumference
-                // We'll check 8 points around the circle plus the center
                 const numPoints = 8;
                 const angleStep = (Math.PI * 2) / numPoints;
 
@@ -659,37 +659,93 @@
                     return false; // Center is on black line
                 }
 
-                // Check points around the brush perimeter at half radius and full radius
-                const radii = [brushRadius / 2, brushRadius];
+                // Check points around the brush perimeter at full radius (edge of brush)
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = i * angleStep;
+                    const edgeX = Math.round(x + Math.cos(angle) * brushRadius);
+                    const edgeY = Math.round(y + Math.sin(angle) * brushRadius);
 
-                for (let radiusMultiplier of radii) {
-                    for (let i = 0; i < numPoints; i++) {
-                        const angle = i * angleStep;
-                        const checkX = Math.round(x + Math.cos(angle) * radiusMultiplier);
-                        const checkY = Math.round(y + Math.sin(angle) * radiusMultiplier);
+                    // Make sure we're within canvas bounds
+                    if (edgeX >= 0 && edgeX < app.boundaryCanvas.width &&
+                        edgeY >= 0 && edgeY < app.boundaryCanvas.height) {
+                        pixelData = app.boundaryCtx.getImageData(edgeX, edgeY, 1, 1).data;
 
-                        // Make sure we're within canvas bounds
-                        if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
-                            checkY >= 0 && checkY < app.boundaryCanvas.height) {
-                            pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
-                            const r = pixelData[0];
-                            const g = pixelData[1];
-                            const b = pixelData[2];
+                        if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
+                            // Edge is touching a black line - measure penetration
+                            const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
+                            const lineThickness = estimateLineThickness(edgeX, edgeY, angle);
 
-                            if (r < threshold && g < threshold && b < threshold) {
-                                // Found a black line at this point on the brush edge
+                            // Only trigger sound if penetration exceeds threshold
+                            if (lineThickness > 0 && penetration > lineThickness * penetrationThreshold) {
                                 return false;
                             }
                         }
                     }
                 }
 
-                // None of the checked points are on black lines
+                // Either no black lines detected or penetration is within tolerance
                 return true;
             } catch (e) {
                 console.warn('Boundary check failed:', e);
                 return true; // If error, allow drawing
             }
+        }
+
+        // Measure how far the brush has penetrated into the black line
+        function measurePenetrationDepth(centerX, centerY, angle, brushRadius) {
+            const threshold = 128;
+            let penetration = 0;
+            const maxCheck = brushRadius + 20; // Check a bit beyond brush edge
+
+            // Cast ray from center outward along the angle
+            for (let r = brushRadius; r < maxCheck; r++) {
+                const checkX = Math.round(centerX + Math.cos(angle) * r);
+                const checkY = Math.round(centerY + Math.sin(angle) * r);
+
+                if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
+                    checkY >= 0 && checkY < app.boundaryCanvas.height) {
+                    const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
+
+                    if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
+                        penetration++;
+                    } else {
+                        break; // Exited the black line
+                    }
+                }
+            }
+
+            return penetration;
+        }
+
+        // Estimate the thickness of the boundary line at a point
+        function estimateLineThickness(x, y, angle) {
+            const threshold = 128;
+            let thickness = 0;
+            const maxThickness = 40; // Maximum expected line thickness
+
+            // Cast ray perpendicular to the edge to measure line width
+            const perpAngle = angle + Math.PI / 2;
+
+            // Search in both directions
+            for (let dir of [-1, 1]) {
+                for (let dist = 0; dist < maxThickness; dist++) {
+                    const checkX = Math.round(x + Math.cos(perpAngle) * dist * dir);
+                    const checkY = Math.round(y + Math.sin(perpAngle) * dist * dir);
+
+                    if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
+                        checkY >= 0 && checkY < app.boundaryCanvas.height) {
+                        const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
+
+                        if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
+                            thickness++;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return thickness || 8; // Default to 8 pixels if can't measure
         }
 
         // YOUR BOOK DATA with actual image paths
