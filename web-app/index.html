@@ -1182,14 +1182,12 @@
         }
 
         function handleWheel(e) {
-            if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? -app.zoom.step : app.zoom.step;
-                const newScale = Math.max(app.zoom.minScale, Math.min(app.zoom.maxScale, app.zoom.scale + delta));
-                if (newScale !== app.zoom.scale) {
-                    app.zoom.scale = newScale;
-                    applyZoom();
-                }
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -app.zoom.step : app.zoom.step;
+            const newScale = Math.max(app.zoom.minScale, Math.min(app.zoom.maxScale, app.zoom.scale + delta));
+            if (newScale !== app.zoom.scale) {
+                app.zoom.scale = newScale;
+                applyZoom();
             }
         }
 
