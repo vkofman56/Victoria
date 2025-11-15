@@ -604,37 +604,37 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     // Penetration threshold: 22.5% of brush radius (midpoint of 20-25%)
     const penetrationThreshold = brushRadius * 0.225;
 
-    // Check radial lines from edge toward center
-    // Count how many have boundary pixels deep enough inside
-    let deepPenetrations = 0;
+    // Maximum allowed distance from center for boundary detection
+    // This creates an inner circle - only boundaries within this circle trigger the sound
+    const maxAllowedDistance = brushRadius - penetrationThreshold;
 
+    // Check radial lines from center outward
     for (let i = 0; i < numPoints; i++) {
         const angle = (i / numPoints) * 2.0 * Math.PI;
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
 
-        // Start from the edge of the brush
-        const edgeX = centerX + dx * brushRadius;
-        const edgeY = centerY + dy * brushRadius;
+        // Sample points along the radius from center to edge
+        // We want to find the closest boundary pixel to the center
+        const steps = 10;
+        for (let step = 1; step <= steps; step++) {
+            const distance = (step / steps) * brushRadius;
+            const x = centerX + dx * distance;
+            const y = centerY + dy * distance;
 
-        // Check if there's a boundary at the edge
-        if (!isBoundary(edgeX, edgeY)) {
-            continue; // No boundary on this radial, skip
-        }
-
-        // There's a boundary at the edge, now check if it extends inward past our threshold
-        // Check a point that's penetrationThreshold distance inward from the edge
-        const checkX = centerX + dx * (brushRadius - penetrationThreshold);
-        const checkY = centerY + dy * (brushRadius - penetrationThreshold);
-
-        if (isBoundary(checkX, checkY)) {
-            // Boundary extends deep enough into the brush
-            deepPenetrations++;
+            if (isBoundary(x, y)) {
+                // Found a boundary at this distance from center
+                // Only trigger if it's close enough (within the threshold)
+                if (distance <= maxAllowedDistance) {
+                    return true;
+                }
+                // If boundary is farther out (just touching edge), skip this radial
+                break;
+            }
         }
     }
 
-    // Trigger if at least one radial line shows deep penetration
-    return deepPenetrations > 0;
+    return false;
 }
 
 /**
