@@ -1001,7 +1001,10 @@
             const pos = getPos(e);
 
             if (app.currentTool === 'brush') {
-                const brushDiameter = 15;  // Total width of the brush stroke
+                // Base brush size in screen pixels (constant visual size)
+                const baseBrushDiameter = 15;
+                // Adjust brush size based on zoom - smaller canvas brush when zoomed in
+                const brushDiameter = baseBrushDiameter / app.zoom.scale;
                 const brushRadius = brushDiameter / 2;  // Actual radius from center to edge
                 app.drawingCtx.lineWidth = brushDiameter;
 
@@ -1021,8 +1024,12 @@
                 app.drawingCtx.lineTo(pos.x, pos.y);
                 app.drawingCtx.stroke();
             } else if (app.currentTool === 'eraser') {
+                // Base eraser size in screen pixels (constant visual size)
+                const baseEraserDiameter = 25;
+                // Adjust eraser size based on zoom
+                const eraserDiameter = baseEraserDiameter / app.zoom.scale;
                 app.drawingCtx.globalCompositeOperation = 'destination-out';
-                app.drawingCtx.lineWidth = 25;
+                app.drawingCtx.lineWidth = eraserDiameter;
                 app.drawingCtx.lineCap = 'round';
                 app.drawingCtx.beginPath();
                 app.drawingCtx.moveTo(app.lastX, app.lastY);
