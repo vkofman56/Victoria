@@ -15,9 +15,12 @@ struct AppConstants {
     static let appVersion = "1.0.0"
 
     // MARK: - Drawing Constants
-    static let defaultBrushSize: CGFloat = 10.0
+    static let defaultBrushSize: CGFloat = 8.0
     static let defaultEraserSize: CGFloat = 20.0
     static let canvasResolution = CGSize(width: 2048, height: 2048)
+
+    // Boundary detection
+    static let boundaryPenetrationThreshold: CGFloat = 0.10 // 10% penetration required to trigger sound
 
     // MARK: - Completion Thresholds
     static let completionCoverageThreshold: Double = 0.70 // 70%

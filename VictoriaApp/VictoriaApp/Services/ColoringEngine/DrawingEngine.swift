@@ -92,7 +92,7 @@ class DrawingEngine {
 
         // Draw circles at each point for smooth brush
         for point in points {
-            let brushSize: CGFloat = 10.0
+            let brushSize: CGFloat = 8.0
             let rect = CGRect(
                 x: point.x - brushSize / 2,
                 y: point.y - brushSize / 2,

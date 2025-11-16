@@ -159,6 +159,60 @@ class BoundaryDetector {
         return false
     }
 
+    /// Calculate penetration percentage of brush into boundary
+    /// Returns the percentage of brush circumference points that are on a boundary
+    /// - Parameters:
+    ///   - center: Center point of the brush
+    ///   - brushRadius: Radius of the brush in pixels
+    ///   - numPoints: Number of points to check around the circumference (default: 12)
+    /// - Returns: Percentage of points on boundary (0.0 to 1.0)
+    func calculateBrushPenetration(center: CGPoint, brushRadius: CGFloat, numPoints: Int = 12) -> CGFloat {
+        guard let data = maskData else { return 0.0 }
+
+        var boundaryPoints = 0
+        var totalPoints = 0
+
+        // Check the center
+        totalPoints += 1
+        if isBoundary(at: center) {
+            boundaryPoints += 1
+        }
+
+        // Check points around the circumference
+        for i in 0..<numPoints {
+            let angle = (CGFloat(i) / CGFloat(numPoints)) * 2.0 * .pi
+            let x = center.x + cos(angle) * brushRadius
+            let y = center.y + sin(angle) * brushRadius
+
+            let edgePoint = CGPoint(x: x, y: y)
+
+            // Check this edge point
+            let pixelX = Int(edgePoint.x)
+            let pixelY = Int(edgePoint.y)
+
+            totalPoints += 1
+
+            // Bounds check - out of bounds counts as boundary
+            if pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height {
+                boundaryPoints += 1
+                continue
+            }
+
+            let index = pixelY * width + pixelX
+            guard index < data.count else {
+                boundaryPoints += 1
+                continue
+            }
+
+            // Black pixel (0) = boundary
+            if data[index] < 128 {
+                boundaryPoints += 1
+            }
+        }
+
+        return totalPoints > 0 ? CGFloat(boundaryPoints) / CGFloat(totalPoints) : 0.0
+    }
+
     /// Check if any point in array crosses boundary
     func detectBoundaryViolation(in points: [CGPoint]) -> Bool {
         // Sample points (don't check every single one for performance)

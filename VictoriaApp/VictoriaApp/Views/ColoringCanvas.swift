@@ -46,7 +46,7 @@ struct ColoringCanvas: View {
                             context.stroke(
                                 path,
                                 with: .color(viewModel.selectedColor),
-                                lineWidth: 10
+                                lineWidth: 8
                             )
                         }
                     }

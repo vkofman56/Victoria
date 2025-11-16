@@ -178,12 +178,22 @@ class ColoringViewModel: ObservableObject {
             return
         }
 
-        // Check brush edges (radius = 12.0 to account for brush size + anti-aliasing)
-        // This checks multiple points around the brush circumference for accurate detection
-        if boundaryDetector.isBoundaryAtBrushEdge(center: point, brushRadius: 12.0) {
+        // Use brush radius of 4.0 (half of 8.0 pixel brush diameter)
+        let brushRadius: CGFloat = AppConstants.defaultBrushSize / 2.0
+
+        // Calculate penetration percentage
+        let penetration = boundaryDetector.calculateBrushPenetration(
+            center: point,
+            brushRadius: brushRadius,
+            numPoints: 12
+        )
+
+        // Only trigger boundary violation if penetration exceeds threshold (10%)
+        if penetration > AppConstants.boundaryPenetrationThreshold {
             hasViolatedBoundary = true
             lastBoundaryCheckTime = Date()
             FeedbackManager.shared.boundaryViolationHaptic()
+            AudioManager.shared.play(.boundaryViolation)
         }
     }
 
