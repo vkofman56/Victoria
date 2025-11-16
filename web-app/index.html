@@ -643,7 +643,10 @@
 
         // Check if a pixel is part of the drawable area (inside the lines)
         function isInsideDrawingArea(x, y, brushRadius = 15) {
-            if (!app.boundaryCtx) return true; // If no boundary canvas, allow all
+            if (!app.boundaryCtx) {
+                console.log('No boundary context - allowing all drawing');
+                return true; // If no boundary canvas, allow all
+            }
 
             try {
                 const threshold = 128; // Black threshold
@@ -673,6 +676,7 @@
 
                             // Only trigger sound if penetration exceeds threshold
                             if (lineThickness > 0 && penetration > lineThickness * penetrationThreshold) {
+                                console.log('TRIGGERING SOUND: penetration exceeds threshold!');
                                 return false;
                             }
                         }
@@ -1000,8 +1004,8 @@
                 const brushRadius = 15;
                 app.drawingCtx.lineWidth = brushRadius;
 
-                // Check if any part of the brush is touching black lines
-                const insideBounds = isInsideDrawingArea(pos.x, pos.y, brushRadius / 2);
+                // Check if any part of the brush is touching black lines (use full brushRadius, not halved!)
+                const insideBounds = isInsideDrawingArea(pos.x, pos.y, brushRadius);
 
                 if (!insideBounds) {
                     // Play sound when coloring outside the lines
