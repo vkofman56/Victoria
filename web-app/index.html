@@ -1001,10 +1001,11 @@
             const pos = getPos(e);
 
             if (app.currentTool === 'brush') {
-                const brushRadius = 15;
-                app.drawingCtx.lineWidth = brushRadius;
+                const brushDiameter = 15;  // Total width of the brush stroke
+                const brushRadius = brushDiameter / 2;  // Actual radius from center to edge
+                app.drawingCtx.lineWidth = brushDiameter;
 
-                // Check if any part of the brush is touching black lines (use full brushRadius, not halved!)
+                // Check if any part of the brush edge is penetrating black lines
                 const insideBounds = isInsideDrawingArea(pos.x, pos.y, brushRadius);
 
                 if (!insideBounds) {
