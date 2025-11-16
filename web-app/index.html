@@ -647,7 +647,7 @@
 
             try {
                 const threshold = 128; // Black threshold
-                const penetrationThreshold = 1.0; // Allow 100% penetration into line before sound (testing)
+                const penetrationThreshold = 0.225; // Allow 22.5% penetration into line before sound (edges only)
 
                 // Check multiple points around the brush circumference
                 const numPoints = 8;
@@ -696,8 +696,8 @@
             // Then measure how far past that point the edge is
             let lineStartDistance = -1;
 
-            // Search from center outward to find where black line starts
-            for (let r = 0; r <= brushRadius + 20; r++) {
+            // Search from near center outward to find where black line starts (skip r=0 to avoid center)
+            for (let r = 1; r <= brushRadius + 20; r++) {
                 const checkX = Math.round(centerX + Math.cos(angle) * r);
                 const checkY = Math.round(centerY + Math.sin(angle) * r);
 
