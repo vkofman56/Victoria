@@ -590,16 +590,12 @@ function isBoundary(x, y) {
 }
 
 /**
- * Check if the brush has crossed enough into a boundary (20-25% threshold)
+ * Check if the brush edges have crossed enough into a boundary (20-25% threshold)
  * This allows the brush to touch the line without immediately triggering the sound
+ * IMPORTANT: Only checks the EDGES of the brush, NOT the center
  */
 function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     if (!ColoringEngine.boundaryData) return false;
-
-    // Check the center first - if center is on boundary, we've definitely crossed enough
-    if (isBoundary(centerX, centerY)) {
-        return true;
-    }
 
     // Penetration threshold: 22.5% of brush radius (midpoint of 20-25%)
     const penetrationThreshold = brushRadius * 0.225;
@@ -608,7 +604,7 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     // This creates an inner circle - only boundaries within this circle trigger the sound
     const maxAllowedDistance = brushRadius - penetrationThreshold;
 
-    // Check radial lines from center outward
+    // Check radial lines from center outward to the edge
     for (let i = 0; i < numPoints; i++) {
         const angle = (i / numPoints) * 2.0 * Math.PI;
         const dx = Math.cos(angle);
@@ -616,6 +612,7 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
 
         // Sample points along the radius from center to edge
         // We want to find the closest boundary pixel to the center
+        // Start from step 1 (not 0) to skip the center point itself
         const steps = 10;
         for (let step = 1; step <= steps; step++) {
             const distance = (step / steps) * brushRadius;
@@ -626,6 +623,7 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
                 // Found a boundary at this distance from center
                 // Only trigger if it's close enough (within the threshold)
                 if (distance <= maxAllowedDistance) {
+                    console.log(`Boundary detected at edge: distance=${distance.toFixed(2)}, threshold=${maxAllowedDistance.toFixed(2)}`);
                     return true;
                 }
                 // If boundary is farther out (just touching edge), skip this radial
