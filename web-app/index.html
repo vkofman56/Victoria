@@ -642,7 +642,7 @@
         }
 
         // Check if a pixel is part of the drawable area (inside the lines)
-        function isInsideDrawingArea(x, y, brushRadius = 15) {
+        function isInsideDrawingArea(x, y, brushRadius = 4) {
             if (!app.boundaryCtx) {
                 console.log('No boundary context - allowing all drawing');
                 return true; // If no boundary canvas, allow all
@@ -1002,7 +1002,7 @@
 
             if (app.currentTool === 'brush') {
                 // Base brush size in screen pixels (constant visual size)
-                const baseBrushDiameter = 15;
+                const baseBrushDiameter = 8;
                 // Adjust brush size based on zoom - smaller canvas brush when zoomed in
                 const brushDiameter = baseBrushDiameter / app.zoom.scale;
                 const brushRadius = brushDiameter / 2;  // Actual radius from center to edge

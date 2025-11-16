@@ -320,7 +320,7 @@ function drawBrush(x1, y1, x2, y2) {
     const ctx = ColoringEngine.drawingCtx;
 
     ctx.strokeStyle = ColoringEngine.currentColor;
-    ctx.lineWidth = 15;
+    ctx.lineWidth = 8;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -651,7 +651,7 @@ function checkBoundaryAlongPath(x1, y1, x2, y2) {
 
     // If points are very close, just check the end point
     if (distance < 2.0) {
-        if (isBoundaryAtBrushEdge(x2, y2, 12.0)) {
+        if (isBoundaryAtBrushEdge(x2, y2, 4.0)) {
             triggerBoundaryFeedback();
         }
         return;
@@ -664,8 +664,8 @@ function checkBoundaryAlongPath(x1, y1, x2, y2) {
         const x = x1 + dx * t;
         const y = y1 + dy * t;
 
-        // Check with brush radius of 12.0 (matching iOS version)
-        if (isBoundaryAtBrushEdge(x, y, 12.0)) {
+        // Check with brush radius of 4.0 (8px diameter / 2)
+        if (isBoundaryAtBrushEdge(x, y, 4.0)) {
             triggerBoundaryFeedback();
             break;
         }
