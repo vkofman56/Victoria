@@ -591,6 +591,8 @@
             audioContext: null,
             lastOutOfBoundsSound: 0,
             canvasListenersAdded: false,
+            canvasReadyForDrawing: false,  // Flag to prevent drawing before image loads
+            imageBounds: null,  // Store image position and dimensions
             // Zoom state
             zoom: {
                 scale: 1,
@@ -610,7 +612,32 @@
         // Initialize audio context
         function initAudio() {
             if (!app.audioContext) {
-                app.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    app.audioContext = new AudioContextClass();
+                    console.log('AudioContext created, state:', app.audioContext.state);
+
+                    // If suspended, try to resume on next user interaction
+                    if (app.audioContext.state === 'suspended') {
+                        console.log('AudioContext suspended - will resume on user interaction');
+                        document.addEventListener('click', resumeAudioContext, { once: true });
+                        document.addEventListener('touchstart', resumeAudioContext, { once: true });
+                    }
+                } catch (e) {
+                    console.error('Failed to create AudioContext:', e);
+                    app.audioContext = null;
+                }
+            }
+        }
+
+        // Resume audio context if suspended
+        function resumeAudioContext() {
+            if (app.audioContext && app.audioContext.state === 'suspended') {
+                app.audioContext.resume().then(() => {
+                    console.log('AudioContext resumed, state:', app.audioContext.state);
+                }).catch(e => {
+                    console.error('Failed to resume AudioContext:', e);
+                });
             }
         }
 
@@ -621,24 +648,40 @@
             if (now - app.lastOutOfBoundsSound < 200) return;
             app.lastOutOfBoundsSound = now;
 
-            if (!app.audioContext) initAudio();
+            // Check if audio is available and running
+            if (!app.audioContext) {
+                console.log('AudioContext not initialized');
+                return;
+            }
 
-            const oscillator = app.audioContext.createOscillator();
-            const gainNode = app.audioContext.createGain();
+            if (app.audioContext.state === 'suspended') {
+                console.log('AudioContext suspended, attempting resume...');
+                resumeAudioContext();
+                return;
+            }
 
-            oscillator.connect(gainNode);
-            gainNode.connect(app.audioContext.destination);
+            try {
+                const oscillator = app.audioContext.createOscillator();
+                const gainNode = app.audioContext.createGain();
 
-            // Create a "buzzer" sound
-            oscillator.frequency.value = 200;
-            oscillator.type = 'square';
+                oscillator.connect(gainNode);
+                gainNode.connect(app.audioContext.destination);
 
-            // Quick fade out
-            gainNode.gain.setValueAtTime(0.3, app.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, app.audioContext.currentTime + 0.1);
+                // Create a "buzzer" sound
+                oscillator.frequency.value = 200;
+                oscillator.type = 'square';
 
-            oscillator.start(app.audioContext.currentTime);
-            oscillator.stop(app.audioContext.currentTime + 0.1);
+                // Quick fade out
+                gainNode.gain.setValueAtTime(0.3, app.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, app.audioContext.currentTime + 0.1);
+
+                oscillator.start(app.audioContext.currentTime);
+                oscillator.stop(app.audioContext.currentTime + 0.1);
+
+                console.log('Boundary sound played');
+            } catch (e) {
+                console.error('Failed to play sound:', e);
+            }
         }
 
         // Check if a pixel is part of the drawable area (inside the lines)
@@ -813,13 +856,21 @@
 
         // INITIALIZE
         window.onload = () => {
+            console.log('🎨 Coloring Book Version: 2024-FIX-SOUND-V3');
+
+            // Initialize audio early to avoid autoplay policy issues
+            initAudio();
+
             renderGallery();
             setupColorPalette();
             showGallery();
+
             // Initialize first color
             if (colors.length > 0) {
                 app.selectedColor = colors[0];
             }
+
+            console.log('Initialization complete');
         };
 
         // RENDER GALLERY
@@ -851,6 +902,19 @@
         function showColoring() {
             showView('coloring-view');
             setTimeout(() => setupCanvas(), 100);
+        }
+
+        // Initialize coloring engine for a specific picture
+        // This is called from type1-page.js when user selects a picture
+        function initializeColoringEngine(picture, page) {
+            console.log('Initializing coloring engine for:', picture.word);
+
+            // Set the current page and picture index
+            app.currentPage = page;
+            app.currentPictureIndex = page.pictures.indexOf(picture);
+
+            // Show the coloring view
+            showColoring();
         }
 
         // OPEN PAGE
@@ -892,6 +956,9 @@
         // SETUP CANVAS
         function setupCanvas() {
             console.log('Setting up canvas...');
+            // Block drawing until image loads
+            app.canvasReadyForDrawing = false;
+
             const canvas = document.getElementById('coloring-canvas');
             const drawingCanvas = document.getElementById('drawing-canvas');
             const wrapper = document.querySelector('.canvas-wrapper');
@@ -943,10 +1010,24 @@
 
                 // Store the image bounds for drawing restriction
                 app.imageBounds = { x, y, width: img.width * scale, height: img.height * scale };
-                console.log('Image drawn to canvas and boundary canvas ready');
+
+                // Enable drawing now that image is loaded
+                app.canvasReadyForDrawing = true;
+                console.log('Image drawn to canvas and boundary canvas ready - READY FOR DRAWING');
             };
             img.onerror = () => {
                 console.error('Failed to load image:', picture.image);
+
+                // Fill with white as fallback
+                app.boundaryCtx.fillStyle = 'white';
+                app.boundaryCtx.fillRect(0, 0, app.boundaryCanvas.width, app.boundaryCanvas.height);
+
+                // Store dummy bounds
+                app.imageBounds = { x: 0, y: 0, width: app.boundaryCanvas.width, height: app.boundaryCanvas.height };
+
+                // Enable drawing anyway (graceful degradation)
+                app.canvasReadyForDrawing = true;
+                console.warn('Image load failed - boundary detection disabled, but drawing enabled');
             };
             img.src = picture.image;
 
@@ -989,6 +1070,10 @@
 
         // DRAWING
         function startDraw(e) {
+            if (!app.canvasReadyForDrawing) {
+                console.log('Canvas not ready yet, ignoring input');
+                return;
+            }
             app.isDrawing = true;
             const pos = getPos(e);
             app.lastX = pos.x;
@@ -997,7 +1082,7 @@
         }
 
         function draw(e) {
-            if (!app.isDrawing) return;
+            if (!app.isDrawing || !app.canvasReadyForDrawing) return;
             const pos = getPos(e);
 
             if (app.currentTool === 'brush') {
@@ -1050,18 +1135,30 @@
             const canvas = e.target;
             const rect = canvas.getBoundingClientRect();
 
-            // Get position relative to the visible canvas (already includes zoom transformation)
-            const clientX = e.clientX - rect.left;
-            const clientY = e.clientY - rect.top;
+            // Get screen position
+            const screenX = e.clientX;
+            const screenY = e.clientY;
 
-            // The rect dimensions already include the zoom scale
-            // So we just need to map from the visual size to the canvas internal resolution
+            // Get position relative to visual canvas (getBoundingClientRect includes CSS transforms)
+            // rect.left and rect.top account for both page position AND CSS transform translate
+            const relX = screenX - rect.left;
+            const relY = screenY - rect.top;
+
+            // Map from visual size (affected by zoom scale) to canvas internal resolution
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
-            // Convert to canvas coordinates
-            const x = clientX * scaleX;
-            const y = clientY * scaleY;
+            const x = relX * scaleX;
+            const y = relY * scaleY;
+
+            // Validate coordinates are within bounds
+            if (x < 0 || x > canvas.width || y < 0 || y > canvas.height) {
+                // Outside canvas - this is normal when dragging near edges
+                // Clamp to canvas bounds for safety
+                const clampedX = Math.max(0, Math.min(canvas.width, x));
+                const clampedY = Math.max(0, Math.min(canvas.height, y));
+                return { x: clampedX, y: clampedY };
+            }
 
             return { x, y };
         }
