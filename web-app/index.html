@@ -202,6 +202,8 @@
             width: 100%;
             height: 100%;
             touch-action: none;
+            /* Enable smooth, high-quality image rendering */
+            image-rendering: auto;
         }
 
         #coloring-canvas {
@@ -965,18 +967,39 @@
 
             // Get the actual rendered size
             const rect = wrapper.getBoundingClientRect();
-            const size = Math.min(rect.width, rect.height);
+            const displaySize = Math.min(rect.width, rect.height);
 
-            canvas.width = size;
-            canvas.height = size;
-            drawingCanvas.width = size;
-            drawingCanvas.height = size;
+            // Use devicePixelRatio for high-DPI displays, cap at 2x for performance
+            const resolutionScale = Math.min(window.devicePixelRatio || 1, 2);
+            const canvasSize = displaySize * resolutionScale;
+
+            // Set internal canvas dimensions (higher resolution)
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            drawingCanvas.width = canvasSize;
+            drawingCanvas.height = canvasSize;
+
+            // Set CSS display size
+            canvas.style.width = displaySize + 'px';
+            canvas.style.height = displaySize + 'px';
+            drawingCanvas.style.width = displaySize + 'px';
+            drawingCanvas.style.height = displaySize + 'px';
 
             console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
-            console.log('Wrapper size:', rect.width, 'x', rect.height);
+            console.log('Display size:', displaySize, 'x', displaySize);
+            console.log('Resolution scale:', resolutionScale);
 
             app.ctx = canvas.getContext('2d');
             app.drawingCtx = drawingCanvas.getContext('2d');
+
+            // Enable image smoothing for high-quality rendering
+            app.ctx.imageSmoothingEnabled = true;
+            app.ctx.imageSmoothingQuality = 'high';
+            app.drawingCtx.imageSmoothingEnabled = true;
+            app.drawingCtx.imageSmoothingQuality = 'high';
+
+            // Store resolution scale for drawing operations
+            app.resolutionScale = resolutionScale;
 
             // Create hidden boundary canvas for pixel detection
             if (!app.boundaryCanvas) {
@@ -1088,8 +1111,9 @@
             if (app.currentTool === 'brush') {
                 // Base brush size in screen pixels (constant visual size)
                 const baseBrushDiameter = 8;
-                // Adjust brush size based on zoom - smaller canvas brush when zoomed in
-                const brushDiameter = baseBrushDiameter / app.zoom.scale;
+                // Adjust brush size based on zoom and resolution scale
+                // Divide by zoom (smaller when zoomed in), multiply by resolution (larger for high-DPI)
+                const brushDiameter = (baseBrushDiameter / app.zoom.scale) * (app.resolutionScale || 1);
                 const brushRadius = brushDiameter / 2;  // Actual radius from center to edge
                 app.drawingCtx.lineWidth = brushDiameter;
 
@@ -1111,8 +1135,8 @@
             } else if (app.currentTool === 'eraser') {
                 // Base eraser size in screen pixels (constant visual size)
                 const baseEraserDiameter = 25;
-                // Adjust eraser size based on zoom
-                const eraserDiameter = baseEraserDiameter / app.zoom.scale;
+                // Adjust eraser size based on zoom and resolution scale
+                const eraserDiameter = (baseEraserDiameter / app.zoom.scale) * (app.resolutionScale || 1);
                 app.drawingCtx.globalCompositeOperation = 'destination-out';
                 app.drawingCtx.lineWidth = eraserDiameter;
                 app.drawingCtx.lineCap = 'round';

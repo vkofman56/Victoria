@@ -18,7 +18,8 @@ const ColoringEngine = {
     baseImage: null,
     boundaryMask: null,
     boundaryData: null,
-    hasViolatedBoundary: false
+    hasViolatedBoundary: false,
+    resolutionScale: 1
 };
 
 /**
@@ -63,23 +64,44 @@ function initializeColoringEngine(picture, page) {
 
 /**
  * Setup canvas size to match container
+ * Uses devicePixelRatio for crisp rendering at higher zoom levels
  */
 function setupCanvasSize() {
     const wrapper = document.querySelector('.canvas-wrapper');
     const rect = wrapper.getBoundingClientRect();
 
-    const width = rect.width;
-    const height = rect.height;
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
+    // Use devicePixelRatio for high-DPI displays, cap at 2x for performance
+    // This creates a canvas with higher internal resolution
+    const resolutionScale = Math.min(window.devicePixelRatio || 1, 2);
+
+    // Internal canvas dimensions (higher resolution)
+    const canvasWidth = displayWidth * resolutionScale;
+    const canvasHeight = displayHeight * resolutionScale;
 
     // Set both canvases to same size
     [ColoringEngine.canvas, ColoringEngine.drawingCanvas].forEach(canvas => {
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.width = width + 'px';
-        canvas.style.height = height + 'px';
+        // Internal resolution (actual pixel data)
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        // Display size (CSS)
+        canvas.style.width = displayWidth + 'px';
+        canvas.style.height = displayHeight + 'px';
     });
 
-    console.log('Canvas size:', width, 'x', height);
+    // Store resolution scale for coordinate calculations
+    ColoringEngine.resolutionScale = resolutionScale;
+
+    // Enable image smoothing on contexts for anti-aliasing
+    ColoringEngine.ctx.imageSmoothingEnabled = true;
+    ColoringEngine.ctx.imageSmoothingQuality = 'high';
+    ColoringEngine.drawingCtx.imageSmoothingEnabled = true;
+    ColoringEngine.drawingCtx.imageSmoothingQuality = 'high';
+
+    console.log('Canvas size:', displayWidth, 'x', displayHeight, '| Resolution scale:', resolutionScale);
 }
 
 /**
@@ -320,7 +342,8 @@ function drawBrush(x1, y1, x2, y2) {
     const ctx = ColoringEngine.drawingCtx;
 
     ctx.strokeStyle = ColoringEngine.currentColor;
-    ctx.lineWidth = 8;
+    // Scale brush size by resolution scale to maintain visual size
+    ctx.lineWidth = 8 * ColoringEngine.resolutionScale;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -337,7 +360,8 @@ function drawEraser(x1, y1, x2, y2) {
     const ctx = ColoringEngine.drawingCtx;
 
     ctx.globalCompositeOperation = 'destination-out';
-    ctx.lineWidth = 25;
+    // Scale eraser size by resolution scale to maintain visual size
+    ctx.lineWidth = 25 * ColoringEngine.resolutionScale;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -649,23 +673,26 @@ function checkBoundaryAlongPath(x1, y1, x2, y2) {
     const dy = y2 - y1;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
+    // Scale brush radius by resolution scale (4.0 = 8px diameter / 2)
+    const brushRadius = 4.0 * ColoringEngine.resolutionScale;
+
     // If points are very close, just check the end point
-    if (distance < 2.0) {
-        if (isBoundaryAtBrushEdge(x2, y2, 4.0)) {
+    if (distance < 2.0 * ColoringEngine.resolutionScale) {
+        if (isBoundaryAtBrushEdge(x2, y2, brushRadius)) {
             triggerBoundaryFeedback();
         }
         return;
     }
 
-    // Interpolate points along the path (check every ~5 pixels)
-    const steps = Math.max(Math.floor(distance / 5.0), 1);
+    // Interpolate points along the path (check every ~5 pixels, scaled)
+    const stepSize = 5.0 * ColoringEngine.resolutionScale;
+    const steps = Math.max(Math.floor(distance / stepSize), 1);
     for (let i = 0; i <= steps; i++) {
         const t = i / steps;
         const x = x1 + dx * t;
         const y = y1 + dy * t;
 
-        // Check with brush radius of 4.0 (8px diameter / 2)
-        if (isBoundaryAtBrushEdge(x, y, 4.0)) {
+        if (isBoundaryAtBrushEdge(x, y, brushRadius)) {
             triggerBoundaryFeedback();
             break;
         }
