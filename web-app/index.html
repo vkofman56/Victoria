@@ -1326,11 +1326,11 @@
                 wrapper.style.transform = `translate(${app.zoom.translateX}px, ${app.zoom.translateY}px) scale(${app.zoom.scale})`;
                 wrapper.style.transformOrigin = 'center center';
 
-                // Update cursor to indicate panning is available when zoomed in
+                // Update cursor - only show grab/grabbing when actually panning
                 const canvas = document.getElementById('drawing-canvas');
                 if (canvas) {
-                    if (app.zoom.scale > 1) {
-                        canvas.style.cursor = app.zoom.isPanning ? 'grabbing' : 'grab';
+                    if (app.zoom.isPanning) {
+                        canvas.style.cursor = 'grabbing';
                     } else {
                         canvas.style.cursor = 'crosshair';
                     }
