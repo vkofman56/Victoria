@@ -1114,11 +1114,15 @@
                 // Adjust brush size based on zoom and resolution scale
                 // Divide by zoom (smaller when zoomed in), multiply by resolution (larger for high-DPI)
                 const brushDiameter = (baseBrushDiameter / app.zoom.scale) * (app.resolutionScale || 1);
-                const brushRadius = brushDiameter / 2;  // Actual radius from center to edge
                 app.drawingCtx.lineWidth = brushDiameter;
 
+                // For boundary detection, use zoom-independent radius
+                // The boundary canvas is at fixed internal resolution, so we need to compare
+                // against the same brush size regardless of zoom level
+                const boundaryBrushRadius = (baseBrushDiameter * (app.resolutionScale || 1)) / 2;
+
                 // Check if any part of the brush edge is penetrating black lines
-                const insideBounds = isInsideDrawingArea(pos.x, pos.y, brushRadius);
+                const insideBounds = isInsideDrawingArea(pos.x, pos.y, boundaryBrushRadius);
 
                 if (!insideBounds) {
                     // Play sound when coloring outside the lines
