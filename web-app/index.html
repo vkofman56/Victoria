@@ -1348,6 +1348,11 @@
             const newScale = Math.min(app.zoom.scale + app.zoom.step, app.zoom.maxScale);
             if (newScale !== app.zoom.scale) {
                 app.zoom.scale = newScale;
+                // Reset pan position when returning to scale 1
+                if (app.zoom.scale === 1) {
+                    app.zoom.translateX = 0;
+                    app.zoom.translateY = 0;
+                }
                 applyZoom();
             }
         }
@@ -1356,6 +1361,11 @@
             const newScale = Math.max(app.zoom.scale - app.zoom.step, app.zoom.minScale);
             if (newScale !== app.zoom.scale) {
                 app.zoom.scale = newScale;
+                // Reset pan position when returning to scale 1
+                if (app.zoom.scale === 1) {
+                    app.zoom.translateX = 0;
+                    app.zoom.translateY = 0;
+                }
                 applyZoom();
             }
         }
