@@ -552,6 +552,9 @@
                     <button id="zoom-in" class="zoom-btn" title="Zoom In">+</button>
                     <button id="zoom-out" class="zoom-btn" title="Zoom Out">−</button>
                     <button id="zoom-reset" class="zoom-btn" title="Reset Zoom">⟲</button>
+                    <div id="pan-hint" style="display: none; font-size: 10px; text-align: center; color: #667eea; padding: 4px; margin-top: 4px; background: white; border-radius: 4px; max-width: 100px; line-height: 1.2;">
+                        Shift+Drag or Right-Click to pan
+                    </div>
                     <button id="zoom-return" class="zoom-return-btn" title="Return" onclick="showType1Page()">←</button>
                 </div>
                 <div class="canvas-wrapper" id="canvas-wrapper">
@@ -1069,6 +1072,13 @@
                 drawingCanvas.addEventListener('touchmove', handleTouch, { passive: false });
                 drawingCanvas.addEventListener('touchend', stopDraw);
 
+                // Prevent context menu on right-click (used for panning)
+                drawingCanvas.addEventListener('contextmenu', (e) => {
+                    if (app.zoom.scale > 1) {
+                        e.preventDefault();
+                    }
+                });
+
                 // Add zoom event listeners
                 const wrapper = document.getElementById('canvas-wrapper');
                 wrapper.addEventListener('wheel', handleWheel, { passive: false });
@@ -1082,8 +1092,8 @@
                 console.log('Event listeners added (including zoom controls)');
             }
 
-            // Reset zoom when loading new picture
-            resetZoom();
+            // Reset zoom when loading new picture (with small delay to ensure DOM is ready)
+            setTimeout(() => resetZoom(), 50);
 
             // Initialize tool state
             app.currentTool = 'brush';
@@ -1097,6 +1107,17 @@
                 console.log('Canvas not ready yet, ignoring input');
                 return;
             }
+
+            // Check if panning mode (Shift key, middle button, or right button while zoomed)
+            if (app.zoom.scale > 1 && (e.shiftKey || e.button === 1 || e.button === 2)) {
+                e.preventDefault();
+                app.zoom.isPanning = true;
+                app.zoom.lastPanX = e.clientX;
+                app.zoom.lastPanY = e.clientY;
+                applyZoom(); // Update cursor
+                return;
+            }
+
             app.isDrawing = true;
             const pos = getPos(e);
             app.lastX = pos.x;
@@ -1105,6 +1126,22 @@
         }
 
         function draw(e) {
+            // Handle panning with mouse
+            if (app.zoom.isPanning) {
+                e.preventDefault();
+                const deltaX = e.clientX - app.zoom.lastPanX;
+                const deltaY = e.clientY - app.zoom.lastPanY;
+
+                app.zoom.translateX += deltaX;
+                app.zoom.translateY += deltaY;
+
+                app.zoom.lastPanX = e.clientX;
+                app.zoom.lastPanY = e.clientY;
+
+                applyZoom();
+                return;
+            }
+
             if (!app.isDrawing || !app.canvasReadyForDrawing) return;
             const pos = getPos(e);
 
@@ -1157,6 +1194,8 @@
 
         function stopDraw() {
             app.isDrawing = false;
+            app.zoom.isPanning = false;
+            applyZoom(); // Update cursor
         }
 
         function getPos(e) {
@@ -1197,6 +1236,7 @@
                 e.preventDefault();
                 if (e.type === 'touchstart') {
                     handlePinchStart(e);
+                    handlePanStart(e); // Start panning when two fingers touch
                 } else if (e.type === 'touchmove') {
                     handlePinchMove(e);
                     handlePanMove(e);
@@ -1285,6 +1325,22 @@
             if (wrapper) {
                 wrapper.style.transform = `translate(${app.zoom.translateX}px, ${app.zoom.translateY}px) scale(${app.zoom.scale})`;
                 wrapper.style.transformOrigin = 'center center';
+
+                // Update cursor to indicate panning is available when zoomed in
+                const canvas = document.getElementById('drawing-canvas');
+                if (canvas) {
+                    if (app.zoom.scale > 1) {
+                        canvas.style.cursor = app.zoom.isPanning ? 'grabbing' : 'grab';
+                    } else {
+                        canvas.style.cursor = 'crosshair';
+                    }
+                }
+
+                // Show/hide pan hint
+                const panHint = document.getElementById('pan-hint');
+                if (panHint) {
+                    panHint.style.display = app.zoom.scale > 1 ? 'block' : 'none';
+                }
             }
         }
 
@@ -1308,7 +1364,9 @@
             app.zoom.scale = 1;
             app.zoom.translateX = 0;
             app.zoom.translateY = 0;
+            app.zoom.isPanning = false;
             applyZoom();
+            console.log('Zoom reset to initial state: scale=1, translate=(0,0)');
         }
 
         function handlePinchStart(e) {
