@@ -662,9 +662,12 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
             if (edgePenetration > 0) {
                 const penetrationPercent = edgePenetration / lineThickness;
 
+                // DEBUG: Log all penetration attempts
+                console.log(`DEBUG Penetration: brushRadius=${brushRadius.toFixed(2)}, boundaryStart=${boundaryStart.toFixed(2)}, boundaryEnd=${boundaryEnd.toFixed(2)}, thickness=${lineThickness.toFixed(2)}, edgePenetration=${edgePenetration.toFixed(2)}, percent=${(penetrationPercent * 100).toFixed(1)}%, trigger=${penetrationPercent >= 0.5}`);
+
                 // Trigger if edge has penetrated 50% or more through the line
                 if (penetrationPercent >= 0.5) {
-                    console.log(`Boundary penetration: edge=${edgePenetration.toFixed(2)}, thickness=${lineThickness.toFixed(2)}, percent=${(penetrationPercent * 100).toFixed(1)}%`);
+                    console.log(`*** BOUNDARY TRIGGERED: edge=${edgePenetration.toFixed(2)}, thickness=${lineThickness.toFixed(2)}, percent=${(penetrationPercent * 100).toFixed(1)}%`);
                     return true;
                 }
             }
