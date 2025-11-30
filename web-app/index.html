@@ -720,11 +720,11 @@
                             const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
                             const allowedPenetration = brushRadius * penetrationThreshold;
 
-                            console.log(`Edge hit: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, trigger=${penetration > allowedPenetration}`);
+                            console.log(`🔍 DEBUG Edge hit at angle ${(angle * 180 / Math.PI).toFixed(0)}°: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius.toFixed(1)}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, percent=${((penetration / brushRadius) * 100).toFixed(1)}%, threshold=${(penetrationThreshold * 100).toFixed(0)}%, trigger=${penetration > allowedPenetration}`);
 
                             // Only trigger sound if penetration exceeds threshold (based on brush radius)
                             if (penetration > allowedPenetration) {
-                                console.log('TRIGGERING SOUND: penetration exceeds threshold!');
+                                console.log('🔊 TRIGGERING SOUND: penetration exceeds threshold!');
                                 return false;
                             }
                         }
