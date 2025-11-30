@@ -698,7 +698,7 @@
 
             try {
                 const threshold = 128; // Black threshold
-                const penetrationThreshold = 0.10; // Allow 10% penetration into line before sound (edges only)
+                const penetrationThreshold = 0.50; // Allow 50% of brush radius penetration before sound
 
                 // Check multiple points around the brush circumference
                 const numPoints = 8;
@@ -718,12 +718,12 @@
                         if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
                             // Edge is touching a black line - measure penetration
                             const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
-                            const lineThickness = estimateLineThickness(edgeX, edgeY, angle);
+                            const allowedPenetration = brushRadius * penetrationThreshold;
 
-                            console.log(`Edge hit: penetration=${penetration}, lineThickness=${lineThickness}, threshold=${penetrationThreshold}, trigger=${penetration > lineThickness * penetrationThreshold}`);
+                            console.log(`Edge hit: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, trigger=${penetration > allowedPenetration}`);
 
-                            // Only trigger sound if penetration exceeds threshold
-                            if (lineThickness > 0 && penetration > lineThickness * penetrationThreshold) {
+                            // Only trigger sound if penetration exceeds threshold (based on brush radius)
+                            if (penetration > allowedPenetration) {
                                 console.log('TRIGGERING SOUND: penetration exceeds threshold!');
                                 return false;
                             }
