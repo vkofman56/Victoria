@@ -614,19 +614,11 @@ function isBoundary(x, y) {
 }
 
 /**
- * Check if the brush edges have crossed enough into a boundary (20-25% threshold)
- * This allows the brush to touch the line without immediately triggering the sound
- * IMPORTANT: Only checks the EDGES of the brush, NOT the center
+ * Check if the brush edge has penetrated 50% through a boundary line
+ * IMPORTANT: Measures penetration from the EDGE of the brush, not the brush radius
  */
 function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     if (!ColoringEngine.boundaryData) return false;
-
-    // Penetration threshold: 50% of brush radius
-    const penetrationThreshold = brushRadius * 0.50;
-
-    // Maximum allowed distance from center for boundary detection
-    // This creates an inner circle - only boundaries within this circle trigger the sound
-    const maxAllowedDistance = brushRadius - penetrationThreshold;
 
     // Check radial lines from center outward to the edge
     for (let i = 0; i < numPoints; i++) {
@@ -634,24 +626,47 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
 
-        // Sample points along the radius from center to edge
-        // We want to find the closest boundary pixel to the center
-        // Start from step 1 (not 0) to skip the center point itself
-        const steps = 10;
-        for (let step = 1; step <= steps; step++) {
-            const distance = (step / steps) * brushRadius;
+        // Sample points along the radius from center to beyond the edge
+        // We need to find where the boundary starts and measure its thickness
+        const steps = 20;
+        let boundaryStart = -1;
+        let boundaryEnd = -1;
+
+        // Find the boundary extent along this radial
+        for (let step = 0; step <= steps; step++) {
+            const distance = (step / steps) * (brushRadius * 1.5);
             const x = centerX + dx * distance;
             const y = centerY + dy * distance;
 
             if (isBoundary(x, y)) {
-                // Found a boundary at this distance from center
-                // Only trigger if it's close enough (within the threshold)
-                if (distance <= maxAllowedDistance) {
-                    console.log(`Boundary detected at edge: distance=${distance.toFixed(2)}, threshold=${maxAllowedDistance.toFixed(2)}`);
+                if (boundaryStart === -1) {
+                    boundaryStart = distance;
+                }
+                boundaryEnd = distance;
+            } else if (boundaryStart !== -1) {
+                // We've passed through the boundary
+                break;
+            }
+        }
+
+        // If we found a boundary, check penetration
+        if (boundaryStart !== -1 && boundaryEnd !== -1) {
+            const lineThickness = boundaryEnd - boundaryStart;
+
+            // Calculate how far the brush edge has penetrated into the line
+            // Brush edge is at distance brushRadius from center
+            // Penetration = how far past the line start the edge has gone
+            const edgePenetration = brushRadius - boundaryStart;
+
+            // Only consider if the edge has actually penetrated (positive value)
+            if (edgePenetration > 0) {
+                const penetrationPercent = edgePenetration / lineThickness;
+
+                // Trigger if edge has penetrated 50% or more through the line
+                if (penetrationPercent >= 0.5) {
+                    console.log(`Boundary penetration: edge=${edgePenetration.toFixed(2)}, thickness=${lineThickness.toFixed(2)}, percent=${(penetrationPercent * 100).toFixed(1)}%`);
                     return true;
                 }
-                // If boundary is farther out (just touching edge), skip this radial
-                break;
             }
         }
     }
