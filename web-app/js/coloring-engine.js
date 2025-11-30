@@ -621,8 +621,8 @@ function isBoundary(x, y) {
 function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
     if (!ColoringEngine.boundaryData) return false;
 
-    // Penetration threshold: 22.5% of brush radius (midpoint of 20-25%)
-    const penetrationThreshold = brushRadius * 0.225;
+    // Penetration threshold: 50% of brush radius
+    const penetrationThreshold = brushRadius * 0.50;
 
     // Maximum allowed distance from center for boundary detection
     // This creates an inner circle - only boundaries within this circle trigger the sound
