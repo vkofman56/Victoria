@@ -806,17 +806,17 @@
             const maxThickness = 40; // Maximum expected line thickness in one direction
             const stepSize = 0.5; // Sub-pixel precision
 
-            // Measure perpendicular to the angle of approach
-            // The angle parameter indicates the direction FROM center TO edge
-            // We want to measure perpendicular to this (tangent to the circle)
-            const perpAngle = angle + Math.PI / 2;
+            // CRITICAL: Measure in the SAME direction as penetration (radial direction)
+            // NOT perpendicular! We want thickness in the direction of penetration,
+            // not the width/length of the line segment.
+            // The angle parameter is the direction FROM center TO edge (radial direction)
 
             let totalThickness = 0;
 
-            // Measure in positive perpendicular direction
+            // Measure OUTWARD from the edge point (continuing in the radial direction)
             for (let dist = 0; dist < maxThickness; dist += stepSize) {
-                const checkX = Math.round(x + Math.cos(perpAngle) * dist);
-                const checkY = Math.round(y + Math.sin(perpAngle) * dist);
+                const checkX = Math.round(x + Math.cos(angle) * dist);
+                const checkY = Math.round(y + Math.sin(angle) * dist);
 
                 if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
                     checkY >= 0 && checkY < app.boundaryCanvas.height) {
@@ -832,10 +832,10 @@
                 }
             }
 
-            // Measure in negative perpendicular direction
+            // Measure INWARD toward center (opposite of radial direction)
             for (let dist = stepSize; dist < maxThickness; dist += stepSize) {
-                const checkX = Math.round(x + Math.cos(perpAngle + Math.PI) * dist);
-                const checkY = Math.round(y + Math.sin(perpAngle + Math.PI) * dist);
+                const checkX = Math.round(x + Math.cos(angle + Math.PI) * dist);
+                const checkY = Math.round(y + Math.sin(angle + Math.PI) * dist);
 
                 if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
                     checkY >= 0 && checkY < app.boundaryCanvas.height) {
