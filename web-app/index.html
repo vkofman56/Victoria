@@ -790,17 +790,17 @@
         // Estimate the thickness of the boundary line at a point
         function estimateLineThickness(x, y, angle) {
             const threshold = 128;
-            const maxThickness = 40; // Maximum expected line thickness
+            const maxThickness = 40; // Maximum expected line thickness per direction
 
-            // Cast rays in 4 directions to measure line thickness, take the minimum
-            // This gives us the thinnest measurement, which is most accurate for triggering
-            const directions = [0, Math.PI / 2, Math.PI, Math.PI * 3 / 2];
-            let minThickness = maxThickness;
+            // Measure line thickness by casting in multiple directions
+            // For each direction, measure BOTH ways to get full line width
+            const directions = [0, Math.PI / 4, Math.PI / 2, Math.PI * 3 / 4];
+            let minThickness = maxThickness * 2;
 
             for (let direction of directions) {
-                let thickness = 0;
+                let totalThickness = 0;
 
-                // Measure in one direction until we exit the black line
+                // Measure in positive direction
                 for (let dist = 0; dist < maxThickness; dist++) {
                     const checkX = Math.round(x + Math.cos(direction) * dist);
                     const checkY = Math.round(y + Math.sin(direction) * dist);
@@ -810,7 +810,26 @@
                         const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
 
                         if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                            thickness++;
+                            totalThickness++;
+                        } else {
+                            break; // Exited the black line
+                        }
+                    } else {
+                        break; // Hit canvas boundary
+                    }
+                }
+
+                // Measure in negative direction (opposite direction)
+                for (let dist = 1; dist < maxThickness; dist++) { // Start at 1 to avoid double-counting center
+                    const checkX = Math.round(x + Math.cos(direction + Math.PI) * dist);
+                    const checkY = Math.round(y + Math.sin(direction + Math.PI) * dist);
+
+                    if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
+                        checkY >= 0 && checkY < app.boundaryCanvas.height) {
+                        const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
+
+                        if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
+                            totalThickness++;
                         } else {
                             break; // Exited the black line
                         }
@@ -820,13 +839,13 @@
                 }
 
                 // Track minimum thickness found across all directions
-                if (thickness > 0 && thickness < minThickness) {
-                    minThickness = thickness;
+                if (totalThickness > 0 && totalThickness < minThickness) {
+                    minThickness = totalThickness;
                 }
             }
 
             // Return minimum thickness found, or default to 8 pixels
-            return minThickness < maxThickness ? minThickness : 8;
+            return minThickness < (maxThickness * 2) ? minThickness : 8;
         }
 
         // YOUR BOOK DATA with actual image paths
