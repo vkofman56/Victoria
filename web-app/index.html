@@ -723,7 +723,7 @@
                             // Use the larger of: 50% of brush radius OR minimum absolute tolerance
                             const allowedPenetration = Math.max(brushRadius * penetrationThreshold, minAbsolutePenetration);
 
-                            console.log(`🔍 DEBUG Edge hit at angle ${(angle * 180 / Math.PI).toFixed(0)}°: penetration=${penetration.toFixed(1)}px, detectionRadius=${brushRadius.toFixed(1)}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, percent=${((penetration / allowedPenetration) * 100).toFixed(1)}%, threshold=100%, trigger=${penetration > allowedPenetration}`);
+                            console.log(`🔍 DEBUG Edge hit at angle ${(angle * 180 / Math.PI).toFixed(0)}°: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius.toFixed(1)}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, percent=${((penetration / allowedPenetration) * 100).toFixed(1)}%, threshold=50%, trigger=${penetration > allowedPenetration}`);
 
                             // Only trigger sound if penetration exceeds threshold (based on brush radius)
                             if (penetration > allowedPenetration) {
@@ -1160,14 +1160,12 @@
                 const brushDiameter = (baseBrushDiameter / app.zoom.scale) * (app.resolutionScale || 1);
                 app.drawingCtx.lineWidth = brushDiameter;
 
-                // For boundary detection, use a minimum radius to ensure consistent sensitivity
-                // At high zoom, the brush in canvas pixels becomes tiny, so enforce a minimum
-                const minBoundaryRadius = 4 * (app.resolutionScale || 1); // Minimum 4px scaled by resolution
+                // Use the actual brush radius for boundary detection
+                // No minimum enforcement - detection zone should match the actual brush size
                 const actualBrushRadius = brushDiameter / 2;
-                const boundaryBrushRadius = Math.max(actualBrushRadius, minBoundaryRadius);
 
                 // Check if any part of the brush edge is penetrating black lines
-                const insideBounds = isInsideDrawingArea(pos.x, pos.y, boundaryBrushRadius);
+                const insideBounds = isInsideDrawingArea(pos.x, pos.y, actualBrushRadius);
 
                 if (!insideBounds) {
                     // Play sound when coloring outside the lines
