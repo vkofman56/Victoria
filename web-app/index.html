@@ -717,9 +717,16 @@
                         pixelData = app.boundaryCtx.getImageData(edgeX, edgeY, 1, 1).data;
 
                         if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                            // Edge is touching a black line - measure penetration and line thickness
-                            const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
+                            // Edge is touching a black line - measure line thickness first
                             const lineThickness = estimateLineThickness(edgeX, edgeY, angle);
+
+                            // Then measure penetration (capped at line thickness)
+                            const penetration = measurePenetrationDepth(x, y, angle, brushRadius, lineThickness);
+
+                            // Validation: penetration cannot exceed line thickness
+                            if (penetration > lineThickness) {
+                                console.error(`⚠️ VALIDATION ERROR: penetration (${penetration.toFixed(1)}px) > lineThickness (${lineThickness.toFixed(1)}px) - this should never happen!`);
+                            }
 
                             // Allow penetration up to 50% of the LINE THICKNESS (no minimum override!)
                             const allowedPenetration = lineThickness * penetrationThreshold;
@@ -744,7 +751,7 @@
         }
 
         // Measure how far the brush edge has penetrated into the black line
-        function measurePenetrationDepth(centerX, centerY, angle, brushRadius) {
+        function measurePenetrationDepth(centerX, centerY, angle, brushRadius, lineThickness) {
             const threshold = 128;
 
             // The edge point is at centerX,Y + brushRadius in the angle direction
@@ -755,7 +762,9 @@
             // to find where we entered the line (outer edge of line)
             // The distance traveled = penetration depth
             const stepSize = 0.5;
-            const maxDistance = 40; // Max line thickness to check
+
+            // Cap maximum check distance at line thickness (can't penetrate more than that!)
+            const maxDistance = lineThickness || 40; // Use lineThickness, or fallback to 40
 
             let penetration = 0;
 
@@ -782,68 +791,74 @@
                 }
             }
 
+            // Validation: cap penetration at line thickness (shouldn't exceed it)
+            if (lineThickness && penetration > lineThickness) {
+                console.warn(`Capping penetration from ${penetration.toFixed(1)}px to lineThickness ${lineThickness.toFixed(1)}px`);
+                penetration = lineThickness;
+            }
+
             return penetration;
         }
 
         // Estimate the thickness of the boundary line at a point
         function estimateLineThickness(x, y, angle) {
             const threshold = 128;
-            const maxThickness = 40; // Maximum expected line thickness per direction
+            const maxThickness = 40; // Maximum expected line thickness in one direction
+            const stepSize = 0.5; // Sub-pixel precision
 
-            // Measure line thickness by casting in multiple directions
-            // For each direction, measure BOTH ways to get full line width
-            const directions = [0, Math.PI / 4, Math.PI / 2, Math.PI * 3 / 4];
-            let minThickness = maxThickness * 2;
+            // Measure perpendicular to the angle of approach
+            // The angle parameter indicates the direction FROM center TO edge
+            // We want to measure perpendicular to this (tangent to the circle)
+            const perpAngle = angle + Math.PI / 2;
 
-            for (let direction of directions) {
-                let totalThickness = 0;
+            let totalThickness = 0;
 
-                // Measure in positive direction
-                for (let dist = 0; dist < maxThickness; dist++) {
-                    const checkX = Math.round(x + Math.cos(direction) * dist);
-                    const checkY = Math.round(y + Math.sin(direction) * dist);
+            // Measure in positive perpendicular direction
+            for (let dist = 0; dist < maxThickness; dist += stepSize) {
+                const checkX = Math.round(x + Math.cos(perpAngle) * dist);
+                const checkY = Math.round(y + Math.sin(perpAngle) * dist);
 
-                    if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
-                        checkY >= 0 && checkY < app.boundaryCanvas.height) {
-                        const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
+                if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
+                    checkY >= 0 && checkY < app.boundaryCanvas.height) {
+                    const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
 
-                        if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                            totalThickness++;
-                        } else {
-                            break; // Exited the black line
-                        }
+                    if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
+                        totalThickness += stepSize;
                     } else {
-                        break; // Hit canvas boundary
+                        break; // Exited the black line
                     }
-                }
-
-                // Measure in negative direction (opposite direction)
-                for (let dist = 1; dist < maxThickness; dist++) { // Start at 1 to avoid double-counting center
-                    const checkX = Math.round(x + Math.cos(direction + Math.PI) * dist);
-                    const checkY = Math.round(y + Math.sin(direction + Math.PI) * dist);
-
-                    if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
-                        checkY >= 0 && checkY < app.boundaryCanvas.height) {
-                        const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
-
-                        if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                            totalThickness++;
-                        } else {
-                            break; // Exited the black line
-                        }
-                    } else {
-                        break; // Hit canvas boundary
-                    }
-                }
-
-                // Track minimum thickness found across all directions
-                if (totalThickness > 0 && totalThickness < minThickness) {
-                    minThickness = totalThickness;
+                } else {
+                    break; // Hit canvas boundary
                 }
             }
 
-            // Return minimum thickness found, or default to 8 pixels
-            return minThickness < (maxThickness * 2) ? minThickness : 8;
+            // Measure in negative perpendicular direction
+            for (let dist = stepSize; dist < maxThickness; dist += stepSize) {
+                const checkX = Math.round(x + Math.cos(perpAngle + Math.PI) * dist);
+                const checkY = Math.round(y + Math.sin(perpAngle + Math.PI) * dist);
+
+                if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
+                    checkY >= 0 && checkY < app.boundaryCanvas.height) {
+                    const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
+
+                    if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
+                        totalThickness += stepSize;
+                    } else {
+                        break; // Exited the black line
+                    }
+                } else {
+                    break; // Hit canvas boundary
+                }
+            }
+
+            // Validation: ensure we return a sensible value
+            // If measurement failed (totalThickness = 0), use default
+            if (totalThickness <= 0) {
+                console.warn('Line thickness measurement failed, using default 8px');
+                return 8;
+            }
+
+            return totalThickness;
         }
 
         // YOUR BOOK DATA with actual image paths
