@@ -573,7 +573,7 @@ function extractBoundaryMask() {
     // Create boundary data array
     ColoringEngine.boundaryData = new Uint8Array(width * height);
 
-    const threshold = 0.3 * 255; // 30% threshold for detecting dark lines
+    const threshold = 0.15 * 255; // 15% threshold for detecting dark lines
 
     for (let i = 0; i < width * height; i++) {
         const pixelIndex = i * 4;
@@ -665,8 +665,8 @@ function isBoundaryAtBrushEdge(centerX, centerY, brushRadius, numPoints = 12) {
                 // DEBUG: Log all penetration attempts
                 console.log(`DEBUG Penetration: brushRadius=${brushRadius.toFixed(2)}, boundaryStart=${boundaryStart.toFixed(2)}, boundaryEnd=${boundaryEnd.toFixed(2)}, thickness=${lineThickness.toFixed(2)}, edgePenetration=${edgePenetration.toFixed(2)}, percent=${(penetrationPercent * 100).toFixed(1)}%, trigger=${penetrationPercent >= 0.5}`);
 
-                // Trigger if edge has penetrated 50% or more through the line
-                if (penetrationPercent >= 0.5) {
+                // Trigger if edge has penetrated 40% or more through the line
+                if (penetrationPercent >= 0.4) {
                     console.log(`*** BOUNDARY TRIGGERED: edge=${edgePenetration.toFixed(2)}, thickness=${lineThickness.toFixed(2)}, percent=${(penetrationPercent * 100).toFixed(1)}%`);
                     return true;
                 }
