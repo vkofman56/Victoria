@@ -699,9 +699,11 @@
             try {
                 const threshold = 128; // Black threshold
                 const penetrationThreshold = 0.50; // Allow 50% of brush radius penetration before sound
+                const minAbsolutePenetration = 2 * (app.resolutionScale || 1); // Minimum absolute tolerance in canvas pixels
 
                 // Check multiple points around the brush circumference
-                const numPoints = 8;
+                // Use more points for smaller brushes to ensure adequate sampling
+                const numPoints = brushRadius < 3 ? 16 : 8;
                 const angleStep = (Math.PI * 2) / numPoints;
 
                 // Check points around the brush perimeter at full radius (edge of brush)
@@ -718,7 +720,8 @@
                         if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
                             // Edge is touching a black line - measure penetration
                             const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
-                            const allowedPenetration = brushRadius * penetrationThreshold;
+                            // Use the larger of: 50% of brush radius OR minimum absolute tolerance
+                            const allowedPenetration = Math.max(brushRadius * penetrationThreshold, minAbsolutePenetration);
 
                             console.log(`🔍 DEBUG Edge hit at angle ${(angle * 180 / Math.PI).toFixed(0)}°: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius.toFixed(1)}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, percent=${((penetration / brushRadius) * 100).toFixed(1)}%, threshold=${(penetrationThreshold * 100).toFixed(0)}%, trigger=${penetration > allowedPenetration}`);
 
@@ -748,8 +751,12 @@
             // Then measure how far past that point the edge is
             let lineStartDistance = -1;
 
-            // Search from near center outward to find where black line starts (skip r=0 to avoid center)
-            for (let r = 1; r <= brushRadius + 20; r++) {
+            // Use finer step size for small brushes to ensure accurate measurement
+            const stepSize = brushRadius < 3 ? 0.5 : 1;
+            const maxDistance = brushRadius + 20;
+
+            // Search from near center outward to find where black line starts
+            for (let r = stepSize; r <= maxDistance; r += stepSize) {
                 const checkX = Math.round(centerX + Math.cos(angle) * r);
                 const checkY = Math.round(centerY + Math.sin(angle) * r);
 
@@ -1153,10 +1160,9 @@
                 const brushDiameter = (baseBrushDiameter / app.zoom.scale) * (app.resolutionScale || 1);
                 app.drawingCtx.lineWidth = brushDiameter;
 
-                // For boundary detection, use a minimum radius to ensure reliable detection
-                // Even when zoomed in, we need at least 4px radius for accurate edge sampling
-                const minBoundaryRadius = 4 * (app.resolutionScale || 1);
-                const boundaryBrushRadius = Math.max(brushDiameter / 2, minBoundaryRadius);
+                // For boundary detection, use the SAME radius as the actual brush
+                // Must account for zoom scale to match the visible brush size
+                const boundaryBrushRadius = brushDiameter / 2;
 
                 // Check if any part of the brush edge is penetrating black lines
                 const insideBounds = isInsideDrawingArea(pos.x, pos.y, boundaryBrushRadius);
