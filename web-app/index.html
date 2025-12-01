@@ -552,6 +552,9 @@
                     <button id="zoom-in" class="zoom-btn" title="Zoom In">+</button>
                     <button id="zoom-out" class="zoom-btn" title="Zoom Out">−</button>
                     <button id="zoom-reset" class="zoom-btn" title="Reset Zoom">⟲</button>
+                    <div id="zoom-value" style="font-size: 12px; text-align: center; color: #667eea; padding: 6px 4px; margin-top: 4px; background: white; border-radius: 4px; font-weight: bold; min-width: 44px;">
+                        100%
+                    </div>
                     <div id="pan-hint" style="display: none; font-size: 10px; text-align: center; color: #667eea; padding: 4px; margin-top: 4px; background: white; border-radius: 4px; max-width: 100px; line-height: 1.2;">
                         Shift+Drag or Right-Click to pan
                     </div>
@@ -1371,6 +1374,12 @@
                     } else {
                         canvas.style.cursor = 'crosshair';
                     }
+                }
+
+                // Update zoom value display
+                const zoomValue = document.getElementById('zoom-value');
+                if (zoomValue) {
+                    zoomValue.textContent = Math.round(app.zoom.scale * 100) + '%';
                 }
 
                 // Show/hide pan hint
