@@ -1153,9 +1153,10 @@
                 const brushDiameter = (baseBrushDiameter / app.zoom.scale) * (app.resolutionScale || 1);
                 app.drawingCtx.lineWidth = brushDiameter;
 
-                // For boundary detection, use the SAME radius as the actual brush
-                // Must account for zoom scale to match the visible brush size
-                const boundaryBrushRadius = brushDiameter / 2;
+                // For boundary detection, use a minimum radius to ensure reliable detection
+                // Even when zoomed in, we need at least 4px radius for accurate edge sampling
+                const minBoundaryRadius = 4 * (app.resolutionScale || 1);
+                const boundaryBrushRadius = Math.max(brushDiameter / 2, minBoundaryRadius);
 
                 // Check if any part of the brush edge is penetrating black lines
                 const insideBounds = isInsideDrawingArea(pos.x, pos.y, boundaryBrushRadius);
