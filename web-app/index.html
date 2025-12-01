@@ -575,8 +575,12 @@
     </div>
 
     <script>
-        // VERSION: 2024-FIX-CORS-V2
-        console.log('🎨 Coloring Book Version: 2024-FIX-CORS-V2');
+        // VERSION: 2024-FIX-PENETRATION-V3
+        // CHANGELOG:
+        // V3 (2024-12-01): Fixed penetration detection to measure brush CENTER crossing past line OUTER edge
+        //                  Previously measured brush edge overlap, causing premature sound triggers
+        // V2: Fixed CORS issues
+        console.log('🎨 Coloring Book Version: 2024-FIX-PENETRATION-V3');
 
         // APP STATE
         const app = {
@@ -731,11 +735,16 @@
                             // Allow penetration up to 50% of the LINE THICKNESS (no minimum override!)
                             const allowedPenetration = lineThickness * penetrationThreshold;
 
-                            console.log(`🔍 DEBUG Edge hit at angle ${(angle * 180 / Math.PI).toFixed(0)}°: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius.toFixed(1)}px, lineThickness=${lineThickness.toFixed(1)}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, percent=${((penetration / allowedPenetration) * 100).toFixed(1)}%, threshold=50%, trigger=${penetration > allowedPenetration}`);
+                            console.log(`🔍 DEBUG Brush edge touching black at angle ${(angle * 180 / Math.PI).toFixed(0)}°:`);
+                            console.log(`   brushRadius=${brushRadius.toFixed(1)}px, lineThickness=${lineThickness.toFixed(1)}px`);
+                            console.log(`   centerPenetration=${penetration.toFixed(1)}px (how far center crossed past outer edge)`);
+                            console.log(`   allowedPenetration=${allowedPenetration.toFixed(1)}px (50% of line thickness)`);
+                            console.log(`   penetrationPercent=${((penetration / lineThickness) * 100).toFixed(1)}% of line thickness`);
+                            console.log(`   soundTrigger=${penetration > allowedPenetration}`);
 
-                            // Only trigger sound if penetration exceeds 50% of line thickness
+                            // Only trigger sound if brush CENTER penetration exceeds 50% of line thickness
                             if (penetration > allowedPenetration) {
-                                console.log('🔊 TRIGGERING SOUND: penetration exceeds 50% of line thickness!');
+                                console.log('🔊 SOUND TRIGGERED: Brush center crossed more than 50% through the line!');
                                 return false;
                             }
                         }
@@ -750,40 +759,32 @@
             }
         }
 
-        // Measure how far the brush edge has penetrated into the black line
+        // Measure how far the brush CENTER has penetrated past the OUTER edge of the black line
         function measurePenetrationDepth(centerX, centerY, angle, brushRadius, lineThickness) {
             const threshold = 128;
-
-            // The edge point is at centerX,Y + brushRadius in the angle direction
-            const edgeX = centerX + Math.cos(angle) * brushRadius;
-            const edgeY = centerY + Math.sin(angle) * brushRadius;
-
-            // From the edge point (on black line), cast ray BACKWARD toward center
-            // to find where we entered the line (outer edge of line)
-            // The distance traveled = penetration depth
             const stepSize = 0.5;
 
-            // Cap maximum check distance at line thickness (can't penetrate more than that!)
-            const maxDistance = lineThickness || 40; // Use lineThickness, or fallback to 40
+            // CORRECT APPROACH:
+            // 1. Start from brush center
+            // 2. Cast ray OUTWARD in angle direction
+            // 3. Find where we FIRST enter black (outer edge of line)
+            // 4. Distance from center to that outer edge = how far center has penetrated
 
-            let penetration = 0;
+            let distanceToOuterEdge = null;
 
-            // Cast ray from edge backward toward center (opposite of angle)
-            const backwardAngle = angle + Math.PI; // Opposite direction
-
-            for (let dist = 0; dist < maxDistance; dist += stepSize) {
-                const checkX = Math.round(edgeX + Math.cos(backwardAngle) * dist);
-                const checkY = Math.round(edgeY + Math.sin(backwardAngle) * dist);
+            // Cast ray from center outward to find the outer edge of the line
+            for (let dist = 0; dist <= brushRadius + lineThickness; dist += stepSize) {
+                const checkX = Math.round(centerX + Math.cos(angle) * dist);
+                const checkY = Math.round(centerY + Math.sin(angle) * dist);
 
                 if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
                     checkY >= 0 && checkY < app.boundaryCanvas.height) {
                     const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
 
-                    // Check if still on black line
+                    // Check if we've hit black (entered the line)
                     if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                        penetration = dist; // Still in line, update penetration
-                    } else {
-                        // Exited the line - we found the outer edge
+                        // Found the outer edge - this is where the line starts
+                        distanceToOuterEdge = dist;
                         break;
                     }
                 } else {
@@ -791,29 +792,33 @@
                 }
             }
 
-            // Validation: cap penetration at line thickness (shouldn't exceed it)
-            if (lineThickness && penetration > lineThickness) {
-                console.warn(`Capping penetration from ${penetration.toFixed(1)}px to lineThickness ${lineThickness.toFixed(1)}px`);
-                penetration = lineThickness;
+            // If we didn't find an outer edge, brush center is not near/past the line
+            if (distanceToOuterEdge === null) {
+                return 0; // No penetration
             }
 
-            return penetration;
+            // Penetration = how far PAST the outer edge the center has gone
+            // If distanceToOuterEdge is LESS than brushRadius, the center has crossed into the line
+            // Penetration depth = brushRadius - distanceToOuterEdge
+            const penetration = Math.max(0, brushRadius - distanceToOuterEdge);
+
+            // Cap at line thickness (can't penetrate deeper than the line is thick)
+            return Math.min(penetration, lineThickness || penetration);
         }
 
         // Estimate the thickness of the boundary line at a point
+        // x, y = point on the black line (edge point where brush edge touches)
+        // angle = direction from brush center toward edge (radial direction)
         function estimateLineThickness(x, y, angle) {
             const threshold = 128;
-            const maxThickness = 40; // Maximum expected line thickness in one direction
+            const maxThickness = 40; // Maximum expected line thickness
             const stepSize = 0.5; // Sub-pixel precision
 
-            // CRITICAL: Measure in the SAME direction as penetration (radial direction)
-            // NOT perpendicular! We want thickness in the direction of penetration,
-            // not the width/length of the line segment.
-            // The angle parameter is the direction FROM center TO edge (radial direction)
+            // Measure line thickness by continuing from the edge point (x,y)
+            // THROUGH the line in the angle direction until we exit to white
+            let thicknessInDirection = 0;
 
-            let totalThickness = 0;
-
-            // Measure OUTWARD from the edge point (continuing in the radial direction)
+            // Starting from the edge point, measure FORWARD through the line
             for (let dist = 0; dist < maxThickness; dist += stepSize) {
                 const checkX = Math.round(x + Math.cos(angle) * dist);
                 const checkY = Math.round(y + Math.sin(angle) * dist);
@@ -823,28 +828,10 @@
                     const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
 
                     if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                        totalThickness += stepSize;
+                        thicknessInDirection += stepSize;
                     } else {
-                        break; // Exited the black line
-                    }
-                } else {
-                    break; // Hit canvas boundary
-                }
-            }
-
-            // Measure INWARD toward center (opposite of radial direction)
-            for (let dist = stepSize; dist < maxThickness; dist += stepSize) {
-                const checkX = Math.round(x + Math.cos(angle + Math.PI) * dist);
-                const checkY = Math.round(y + Math.sin(angle + Math.PI) * dist);
-
-                if (checkX >= 0 && checkX < app.boundaryCanvas.width &&
-                    checkY >= 0 && checkY < app.boundaryCanvas.height) {
-                    const pixelData = app.boundaryCtx.getImageData(checkX, checkY, 1, 1).data;
-
-                    if (pixelData[0] < threshold && pixelData[1] < threshold && pixelData[2] < threshold) {
-                        totalThickness += stepSize;
-                    } else {
-                        break; // Exited the black line
+                        // Exited to white - found the far edge
+                        break;
                     }
                 } else {
                     break; // Hit canvas boundary
@@ -852,13 +839,12 @@
             }
 
             // Validation: ensure we return a sensible value
-            // If measurement failed (totalThickness = 0), use default
-            if (totalThickness <= 0) {
+            if (thicknessInDirection <= 0) {
                 console.warn('Line thickness measurement failed, using default 8px');
                 return 8;
             }
 
-            return totalThickness;
+            return thicknessInDirection;
         }
 
         // YOUR BOOK DATA with actual image paths
