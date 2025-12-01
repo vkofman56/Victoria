@@ -1,221 +1,99 @@
-# Victoria - Interactive Coloring Book
+# Victoria Interactive Coloring Book - Web App
 
-Interactive coloring book platform available in TWO versions:
-1. **Web App** - For YouTube integration and instant browser access
-2. **Native iOS App** - For premium iPad experience
+Interactive coloring book web application for children featuring number-themed pages with rhyming words from "From 1 to 10 with Rhymes".
 
-Designed for school-age children featuring digital coloring, touch interaction, and engaging feedback.
+## Quick Start
 
-## 🌐 Version 1: Web App (NEW!)
+1. Open `web-app/index.html` in a modern web browser
+2. Select a number page from the gallery
+3. Click a picture quadrant to start coloring
+4. Choose colors and draw within the lines!
 
-**Perfect for YouTube sharing and instant access on any device!**
+## Features
 
-### Features
-- ✨ **Type 1 Pages**: 4 pictures per page with center circle selection
-- 🎯 **Blinking Guide**: Animated circle guides students to select pictures
-- 🎨 **Touch Coloring**: Draw with finger on iPad/iPhone
-- 🖌️ **Full Toolset**: Brush, fill bucket, eraser, undo
-- 📱 **Mobile Optimized**: Works in Safari on iOS devices
-- 🔗 **No Download**: Direct link from YouTube videos
-- 🆓 **Free Hosting**: Deploy on GitHub Pages, Netlify, or Vercel
+- **Gallery View**: Browse all number pages (1-10)
+- **Interactive Selection**: Central circle with 4 picture quadrants
+- **Full Coloring Canvas**:
+  - 10-color palette
+  - Brush and eraser tools
+  - Undo functionality
+  - Clear canvas option
+- **Zoom & Pan**:
+  - Zoom 1x to 3x
+  - Pinch-to-zoom on touch devices
+  - Pan when zoomed in
+- **Boundary Detection**: Audio feedback when coloring outside lines
+- **Responsive Design**: Works on desktop, tablets, and phones
 
-### Quick Start
-```bash
-cd web-app
-# Open index.html in browser or deploy to web
-```
+## Current Content
 
-📖 **Documentation**: See `web-app/README.md` for complete setup
-🚀 **Deployment**: See `web-app/DEPLOYMENT.md` for YouTube integration
-📝 **Add Pages**: See `web-app/EXAMPLE_ADD_PAGES.md` for customization
-
----
-
-## 📱 Version 2: Native iOS App
-
-**Premium iPad experience with advanced features!**
-
-### Features
-- ✅ PDF page rendering with native performance
-- ✅ Digital coloring with finger/Apple Pencil support
-- ✅ Boundary detection with haptic/audio feedback
-- ✅ Color palette with 12 vibrant colors
-- ✅ Eraser and undo/redo tools
-- ✅ Page completion detection with celebration animation
-- ✅ Smooth 60 FPS drawing performance
-
-### Quick Start
-```bash
-# Requires Xcode on macOS
-open VictoriaApp/Victoria.xcodeproj
-# Build and run on iPad simulator or device
-```
-
-📖 **Documentation**: See `Documentation/SETUP_GUIDE.md`
-🏗️ **Architecture**: See `Documentation/ARCHITECTURE.md`
-✨ **Features**: See `Documentation/FEATURES.md`
-
----
-
-## Which Version Should I Use?
-
-### Choose **Web App** if you want to:
-- ✅ Share directly from YouTube videos
-- ✅ Reach users on ANY device (iPad, iPhone, Android, Desktop)
-- ✅ Avoid App Store submission
-- ✅ Free hosting and instant updates
-- ✅ No download required for users
-
-### Choose **Native iOS App** if you want to:
-- ✅ Best possible performance
-- ✅ Full iPad optimization
-- ✅ Apple Pencil support
-- ✅ Offline functionality
-- ✅ App Store distribution
-- ✅ Advanced iOS features (better haptics, etc.)
-
-### Or Use BOTH!
-- Market on YouTube with web version
-- Offer premium iOS app as upgrade
-
----
-
-## Target Audience
-
-School-age children (ages 5-12)
-
-## Technology Stacks
-
-### Web App
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Canvas API**: HTML5 Canvas for drawing
-- **Touch Events**: Native touch support for iOS/Android
-- **Hosting**: GitHub Pages, Netlify, or Vercel (FREE)
-- **No Dependencies**: Pure vanilla code, no frameworks
-
-### Native iOS App
-- **Platform**: iOS (iPad optimized)
-- **Language**: Swift 5.9+
-- **UI Framework**: SwiftUI
-- **Drawing**: CoreGraphics + Custom Drawing Engine
-- **Audio**: AVFoundation
-- **Animations**: SwiftUI Animations + Core Animation
-- **Minimum iOS Version**: iOS 16.0+
+### Pages Available
+- **Page 1 (ONE)**: Sun, Fun, Run, Bun
+- **Page 2 (TWO)**: Tattoo, Cockatoo, I Am Too, Fondue
+- **Page 3 (THREE)**: Tree, Agree, Free, Debris
+- **Page 4 (FOUR)**: Door, Snore, Roar, Core
 
 ## Project Structure
 
 ```
-Victoria/
-├── web-app/                     # 🌐 Web Application
-│   ├── index.html              # Main HTML entry
-│   ├── css/
-│   │   └── styles.css         # All styles and animations
-│   ├── js/
-│   │   ├── app.js            # App logic and view management
-│   │   ├── type1-page.js     # Type 1 page with circle selection
-│   │   └── coloring-engine.js # Drawing and coloring
-│   ├── images/                # Coloring book images
-│   ├── README.md              # Web app setup guide
-│   ├── DEPLOYMENT.md          # How to deploy to web
-│   └── EXAMPLE_ADD_PAGES.md   # How to add pages
-│
-├── VictoriaApp/                 # 📱 Native iOS Application
-│   ├── VictoriaApp.swift       # App entry point
-│   ├── Models/                  # Data models
-│   ├── Views/                   # SwiftUI views
-│   ├── ViewModels/             # View models (MVVM)
-│   ├── Services/               # Business logic
-│   │   ├── ColoringEngine/    # Core coloring logic
-│   │   ├── BoundaryDetector/  # Boundary detection
-│   │   ├── PDFRenderer/       # PDF processing
-│   │   └── AudioManager/      # Sound effects
-│   └── Utilities/              # Helper functions
-│
-├── Documentation/              # 📚 Technical Documentation
-│   ├── ARCHITECTURE.md         # iOS app architecture
-│   ├── FEATURES.md            # Feature specifications
-│   └── SETUP_GUIDE.md         # iOS app setup
-│
-├── Assets/                      # PDF coloring book pages (iOS)
-├── Sounds/                      # Audio files (iOS)
-└── README.md                   # This file
+web-app/
+├── index.html              # Main app (self-contained)
+├── images/                 # Coloring page PNGs
+│   ├── sun.png
+│   ├── fun.png
+│   └── ... (15 total images)
+├── js/                     # Legacy/unused
+└── css/                    # Legacy/unused
 ```
 
-## Prerequisites
+## Technical Details
 
-### For Web App
-- Any modern web browser (Safari, Chrome, Firefox)
-- Text editor (VS Code, Sublime, or any)
-- Optional: Git for deployment
+- **Framework**: Vanilla JavaScript (no dependencies)
+- **Architecture**: Single-file app with dual canvas system
+- **Browser Support**: Modern browsers with Web Audio API
+- **Target Devices**: iPad/iPhone (primary), Desktop (secondary)
 
-### For iOS App
-- macOS 13.0 or later
-- Xcode 15.0 or later
-- iPad running iOS 16.0+ for testing
-- Swift 5.9+
+## Controls
 
-## Getting Started
+### Desktop
+- **Draw**: Click and drag
+- **Zoom**: Mouse wheel or zoom buttons
+- **Pan**: Shift+Drag or Right-Click+Drag (when zoomed)
 
-### Web App Quick Start
+### Touch Devices (iPad/iPhone)
+- **Draw**: Single finger
+- **Zoom**: Pinch gesture or zoom buttons
+- **Pan**: Two-finger drag (when zoomed)
 
-```bash
-# Clone repository
-git clone <repository-url>
-cd Victoria/web-app
+## Development
 
-# Open in browser
-open index.html
+See `WEB-APP-DEVELOPMENT-NOTES.md` for complete development history, architecture details, and technical documentation.
 
-# Or deploy to web (see DEPLOYMENT.md)
-```
+**Active Branch**: `claude/web-app-only-011CV4nxBQnNmtK15assLMD7`
 
-### iOS App Quick Start
+## Adding New Pages
 
-```bash
-# Clone repository
-git clone <repository-url>
-cd Victoria
+1. Extract images from PDF (see `web-app/EXTRACT-IMAGES-GUIDE.md`)
+2. Add images to `web-app/images/`
+3. Update `pages` array in `index.html` (around line 865)
+4. Test in browser
 
-# Add your PDF
-cp /path/to/coloring-book.pdf Assets/
+## Deployment
 
-# Open in Xcode
-open VictoriaApp/Victoria.xcodeproj
+Deploy `web-app/` folder to any static hosting service:
+- GitHub Pages
+- Netlify
+- Vercel
+- AWS S3 + CloudFront
 
-# Build and run (Cmd+R)
-```
-
-## Key Implementation Highlights
-
-### Web App Features
-- **Type 1 Pages**: 4-picture grid with center circle selection
-- **Blinking Animation**: CSS-based quadrant blinking to guide users
-- **Touch Drawing**: HTML5 Canvas with touch event handling
-- **Flood Fill**: JavaScript implementation for color filling
-- **Responsive**: Works on all screen sizes
-- **Zero Dependencies**: Pure vanilla JavaScript
-
-### iOS App Features
-- **Drawing Engine**: Custom SwiftUI Canvas with CoreGraphics
-- **Boundary Detection**: Image processing to extract boundaries
-- **Haptic Feedback**: UIFeedbackGenerator for tactile response
-- **Audio**: AVFoundation for sound effects
-- **Command Pattern**: Efficient undo/redo implementation
-- **Performance**: 60 FPS drawing with optimized bitmap operations
-
-## Contributing
-
-This is a private project. For questions or suggestions, please contact the project owner.
+**Requirements**: HTTPS needed for Web Audio API
 
 ## License
 
-All rights reserved. This project and the associated coloring book content are proprietary.
+Educational project - Victoria Book Series
 
-## Contact
+## Version
 
-Project Owner: [Your Name]
-Email: [Your Email]
+**Current Version**: 2024-FIX-CORS-V2 (see index.html:578)
 
----
-
-Built with ❤️ for creative kids
+**Last Updated**: December 1, 2025
