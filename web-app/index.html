@@ -699,7 +699,6 @@
             try {
                 const threshold = 128; // Black threshold
                 const penetrationThreshold = 0.50; // Allow 50% of LINE THICKNESS penetration before sound
-                const minAbsolutePenetration = 2 * (app.resolutionScale || 1); // Minimum absolute tolerance in canvas pixels
 
                 // Check multiple points around the brush circumference
                 // Use more points for smaller brushes to ensure adequate sampling
@@ -722,8 +721,8 @@
                             const penetration = measurePenetrationDepth(x, y, angle, brushRadius);
                             const lineThickness = estimateLineThickness(edgeX, edgeY, angle);
 
-                            // Allow penetration up to 50% of the LINE THICKNESS (not brush radius!)
-                            const allowedPenetration = Math.max(lineThickness * penetrationThreshold, minAbsolutePenetration);
+                            // Allow penetration up to 50% of the LINE THICKNESS (no minimum override!)
+                            const allowedPenetration = lineThickness * penetrationThreshold;
 
                             console.log(`🔍 DEBUG Edge hit at angle ${(angle * 180 / Math.PI).toFixed(0)}°: penetration=${penetration.toFixed(1)}px, brushRadius=${brushRadius.toFixed(1)}px, lineThickness=${lineThickness.toFixed(1)}px, allowedPenetration=${allowedPenetration.toFixed(1)}px, percent=${((penetration / allowedPenetration) * 100).toFixed(1)}%, threshold=50%, trigger=${penetration > allowedPenetration}`);
 
